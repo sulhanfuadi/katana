@@ -3,6 +3,8 @@ If:
 CompileFlags:
   Add:
     - -xc++
-Diagnostics:
-  Suppress:
-    - "*"
+    - -std=c++14
+    - -I/Users/sulhanf/Second Brain/Projects/coding-projects/Katana Workspace/.vscode/arduino_include
+    - -include
+    - /Users/sulhanf/Second Brain/Projects/coding-projects/Katana Workspace/.vscode/arduino_include/Arduino.h
+    - -w

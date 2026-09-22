@@ -17,6 +17,12 @@ const byte PIN_DOWN_ECHO  = 10;
 const byte PIN_DOWN_TRIG  = 11;
 const byte PIN_WATER_RAW  = A0;
 
+void runDiagnostics();
+void checkMPU6050();
+void checkUltrasonic(const char* label, byte trigPin, byte echoPin, const char* pinsInfo);
+void checkWaterSensor();
+void testActuators();
+
 void setup() {
   Serial.begin(115200);
   while (!Serial) delay(10);
@@ -149,7 +155,7 @@ void loop() {
   Serial.print(F(" | Depan: "));
   if (dFront == 0) Serial.print(F("LEPAS"));
   else {
-    Serial.print(dFront / 58.0, 0);
+    Serial.print((int)(dFront / 58.0));
     Serial.print(F("cm"));
   }
   Serial.print(F(" | Sensor Air: "));
