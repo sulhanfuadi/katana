@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "author": "sulhanfuadi",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-nano", "id": "nano", "top": 15, "left": -10, "attrs": {} },
+    { "type": "wokwi-hc-sr04", "id": "front", "top": -165, "left": -210, "attrs": { "distance": "120" } },
+    { "type": "wokwi-mpu6050", "id": "imu", "top": -150, "left": 180, "attrs": {} },
+    { "type": "wokwi-hc-sr04", "id": "down", "top": 210, "left": -250, "attrs": { "distance": "30", "label": "SENSOR BAWAH" } },
+    { "type": "wokwi-slide-potentiometer", "id": "water", "top": 315, "left": -260, "attrs": { "value": "0", "travelLength": "60", "label": "Water 0-1023" } },
+    { "type": "wokwi-pushbutton", "id": "fall", "top": 405, "left": -205, "attrs": { "color": "red", "label": "TES JATUH", "key": "F" } },
+    { "type": "wokwi-logic-analyzer", "id": "logic", "top": 245, "left": 210, "attrs": { "channelNames": "MOTOR_D5", "filename": "katana-motor-pwm" } },
+    { "type": "wokwi-buzzer", "id": "buzz", "top": 390, "left": 225, "attrs": { "volume": "0.15", "label": "BUZZER JATUH" } }
+  ],
+  "connections": [
+    [ "front:VCC", "nano:5V", "red", [ "v35", "h150" ] ],
+    [ "front:GND", "nano:GND.1", "black", [ "v50", "h170" ] ],
+    [ "front:TRIG", "nano:3", "green", [ "v70", "h145" ] ],
+    [ "front:ECHO", "nano:2", "blue", [ "v85", "h130" ] ],
+
+    [ "imu:VCC", "nano:5V", "red", [ "v35", "h-95" ] ],
+    [ "imu:GND", "nano:GND.1", "black", [ "v50", "h-110" ] ],
+    [ "imu:SDA", "nano:A4", "green", [ "v70", "h-125" ] ],
+    [ "imu:SCL", "nano:A5", "blue", [ "v85", "h-140" ] ],
+
+    [ "down:VCC", "nano:5V", "red", [ "h100", "v-110" ] ],
+    [ "down:GND", "nano:GND.2", "black", [ "h115", "v-90" ] ],
+    [ "down:TRIG", "nano:11", "green", [ "h130", "v-70" ] ],
+    [ "down:ECHO", "nano:10", "blue", [ "h145", "v-55" ] ],
+    [ "water:VCC", "nano:5V", "red", [ "h145", "v-155" ] ],
+    [ "water:GND", "nano:GND.2", "black", [ "h160", "v-135" ] ],
+    [ "water:SIG", "nano:A0", "orange", [ "h175", "v-115" ] ],
+
+    [ "fall:1.l", "nano:4", "purple", [ "h125", "v-235" ] ],
+    [ "fall:2.l", "nano:GND.2", "black", [ "h145", "v-215" ] ],
+
+    [ "nano:5", "logic:D0", "blue", [ "h85", "v160" ] ],
+    [ "logic:GND", "nano:GND.1", "black", [ "h-60", "v-205" ] ],
+    [ "nano:6", "buzz:2", "orange", [ "h105", "v240" ] ],
+    [ "buzz:1", "nano:GND.1", "black", [ "h-80", "v-285" ] ]
+  ],
+  "serialMonitor": { "display": "always", "newline": "lf" },
+  "dependencies": {}
+}
