@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Arduino / PlatformIO build artifacts
+build/
+*.hex
+*.elf
+*.bin
+*.o
+*.d
+*.eep
+*.lss
+*.map
+*.sym
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+
+# Temporary / logic analyzer outputs
+*.vcd
+*.zip
