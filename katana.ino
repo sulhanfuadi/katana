@@ -2,16 +2,10 @@
   KATANA (Kawan Tunanetra) - Smart Cane Prototype
   Target Board: Arduino Nano V3 (ATmega328P)
 
-  Deskripsi:
-  Alat bantu navigasi berbasis retrofit kruk/tongkat siku untuk mendeteksi:
-  1. Objek di depan (HC-SR04 depan) -> Getaran berjenjang (semakin dekat, semakin cepat)
-  2. Tepi turunan / lubang (HC-SR04 bawah) -> 3 pulsa getar kuat
-  3. Genangan air / permukaan basah (Sensor air analog) -> 2 pulsa getar panjang
-  4. Tongkat jatuh / tergeletak (MPU6050) -> Buzzer pola SOS pencari tongkat
-
-  PENTING UNTUK HARDWARE NYATA:
-  - Ubah WOKWI_SIMULATION ke 0 sebelum upload ke Arduino Nano fisik.
-  - Hubungkan Arduino Nano ke port USB (misal: /dev/cu.usbserial-10).
+  Fitur Diagnosa Otomatis & Sensor Presence:
+  - Mendeteksi secara langsung apakah sensor fisik terhubung (RIIL) atau terlepas (LEPAS).
+  - Mencegah false alarm (misal alarm TEPI_TURUNAN tidak akan berbunyi jika sensor bawah memang belum dicolok).
+  - Menampilkan status koneksi real-time setiap sensor di Serial Monitor.
 */
 
 #include <Wire.h>
@@ -45,29 +39,37 @@ const unsigned long DROP_DEBOUNCE_MS = 200;
 const unsigned long FALL_CONFIRM_MS  = 2000;
 
 enum AlertState {
-  NORMAL,
-  OBJECT_LOW,
-  OBJECT_MEDIUM,
-  OBJECT_NEAR,
-  WATER_ALERT,
-  DROP_ALERT,
-  FALL_ALERT
+  STANDBY,        // Sensor utama belum terpasang
+  NORMAL,         // Semua sensor terpasang dan dalam batas aman
+  OBJECT_LOW,     // Objek depan mulai terdeteksi (waspada)
+  OBJECT_MEDIUM,  // Objek depan sedang
+  OBJECT_NEAR,    // Objek depan sangat dekat (bahaya)
+  WATER_ALERT,    // Genangan air / permukaan basah
+  DROP_ALERT,     // Tepi turunan / lubang
+  FALL_ALERT      // Tongkat jatuh / tergeletak
 };
 
-AlertState activeState = NORMAL;
+AlertState activeState = STANDBY;
 unsigned long dropStartMs = 0;
 unsigned long fallStartMs = 0;
 unsigned long lastReportMs = 0;
 
-float frontCm = 400.0;
+// Data sensor & status koneksi hardware
+bool frontConnected = false;
+bool downConnected  = false;
+bool mpuConnected   = false;
+bool waterConnected = true;
+
+float frontCm = -1.0;
+float downCm  = -1.0;
 int dropDeltaCm = 0;
-float downCm = 30.0;
 float downBaselineCm = 30.0;
 int waterValue = 0;
-float tiltDeg = 0.0;
-bool dropConfirmed = false;
-bool fallConfirmed = false;
-bool vibrationOn = false;
+float tiltDeg = -1.0;
+
+bool dropConfirmed  = false;
+bool fallConfirmed  = false;
+bool vibrationOn    = false;
 
 void writeMPU(byte reg, byte value) {
   Wire.beginTransmission(MPU_ADDR);
@@ -97,7 +99,8 @@ bool readMPUAccel(float &ax, float &ay, float &az) {
   return true;
 }
 
-float readUltrasonicCm(byte trigPin, byte echoPin) {
+// Mengembalikan jarak cm jika tersambung, atau -1.0 jika timeout/lepas
+float readUltrasonicCm(byte trigPin, byte echoPin, bool &connected) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
@@ -105,16 +108,21 @@ float readUltrasonicCm(byte trigPin, byte echoPin) {
   digitalWrite(trigPin, LOW);
 
   unsigned long pulse = pulseIn(echoPin, HIGH, 25000UL);
-  if (pulse == 0) return 400.0;
+  if (pulse == 0) {
+    connected = false;
+    return -1.0;
+  }
+  connected = true;
   return pulse / 58.0;
 }
 
 void calibrateDownBaseline() {
   float total = 0.0;
   byte valid = 0;
+  bool isConn = false;
   for (byte i = 0; i < 12; i++) {
-    float value = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO);
-    if (value >= 5.0 && value <= 120.0) {
+    float value = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO, isConn);
+    if (isConn && value >= 5.0 && value <= 120.0) {
       total += value;
       valid++;
     }
@@ -128,29 +136,41 @@ void calibrateDownBaseline() {
 void updateInputs() {
   unsigned long now = millis();
   
-  // Baca sensor depan
-  frontCm = readUltrasonicCm(PIN_FRONT_TRIG, PIN_FRONT_ECHO);
-  delayMicroseconds(2500); // Cegah cross-talk antar sensor ultrasonik
+  // 1. Baca sensor depan
+  frontCm = readUltrasonicCm(PIN_FRONT_TRIG, PIN_FRONT_ECHO, frontConnected);
+  delayMicroseconds(2500); // Cegah cross-talk ultrasonik
   
-  // Baca sensor bawah
-  downCm = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO);
-  waterValue = analogRead(PIN_WATER_RAW);
-  dropDeltaCm = (int)(downCm - downBaselineCm);
-  if (dropDeltaCm < 0) dropDeltaCm = 0;
+  // 2. Baca sensor bawah
+  downCm = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO, downConnected);
+  
+  // Hitung delta bawah hanya jika sensor bawah terhubung
+  if (downConnected) {
+    dropDeltaCm = (int)(downCm - downBaselineCm);
+    if (dropDeltaCm < 0) dropDeltaCm = 0;
+  } else {
+    dropDeltaCm = 0;
+  }
 
-  // Baca accelerometer MPU6050
+  // 3. Baca sensor air
+  waterValue = analogRead(PIN_WATER_RAW);
+
+  // 4. Baca MPU6050
   float ax = 0.0, ay = 0.0, az = 1.0;
   if (readMPUAccel(ax, ay, az)) {
+    mpuConnected = true;
     float magnitude = sqrt(ax * ax + ay * ay + az * az);
     if (magnitude > 0.05) {
       float ratio = fabs(az) / magnitude;
       ratio = constrain(ratio, 0.0f, 1.0f);
       tiltDeg = acos(ratio) * 180.0 / PI;
     }
+  } else {
+    mpuConnected = false;
+    tiltDeg = -1.0;
   }
 
-  // Filter deteksi turunan: hanya jika tongkat tidak sengaja diangkat/dimiringkan (>45 deg)
-  bool dropCandidate = dropDeltaCm > DROP_DELTA_LIMIT_CM && tiltDeg < DROP_TILT_MAX_DEG;
+  // Filter deteksi turunan: HANYA aktif jika sensor bawah benar-benar TERHUBUNG (bukan lepas)
+  bool dropCandidate = downConnected && (dropDeltaCm > DROP_DELTA_LIMIT_CM) && (!mpuConnected || tiltDeg < DROP_TILT_MAX_DEG);
   if (dropCandidate) {
     if (dropStartMs == 0) dropStartMs = now;
     dropConfirmed = (now - dropStartMs >= DROP_DEBOUNCE_MS);
@@ -159,9 +179,9 @@ void updateInputs() {
     dropConfirmed = false;
   }
 
-  // Deteksi tongkat jatuh: kemiringan > 60 deg selama > 2 detik
-  bool fallButton = digitalRead(PIN_FALL_TEST) == LOW;
-  bool fallCandidate = tiltDeg > FALL_TILT_LIMIT_DEG;
+  // Deteksi tongkat jatuh: HANYA aktif jika MPU6050 TERHUBUNG (kemiringan > 60 deg selama > 2 detik)
+  bool fallButton = (digitalRead(PIN_FALL_TEST) == LOW);
+  bool fallCandidate = mpuConnected && (tiltDeg > FALL_TILT_LIMIT_DEG);
   if (fallCandidate) {
     if (fallStartMs == 0) fallStartMs = now;
     fallConfirmed = (now - fallStartMs >= FALL_CONFIRM_MS);
@@ -173,13 +193,22 @@ void updateInputs() {
 }
 
 AlertState decideState() {
+  // Jika seluruh sensor belum dicolok, tetap di mode STANDBY (cegah getar palsu)
+  if (!frontConnected && !downConnected && !mpuConnected) {
+    return STANDBY;
+  }
+
   // Prioritas tunggal: Jatuh > Tepi Turunan > Genangan Air > Objek Depan
   if (fallConfirmed) return FALL_ALERT;
   if (dropConfirmed) return DROP_ALERT;
   if (waterValue > WATER_LIMIT) return WATER_ALERT;
-  if (frontCm < FRONT_NEAR_CM) return OBJECT_NEAR;
-  if (frontCm < FRONT_MEDIUM_CM) return OBJECT_MEDIUM;
-  if (frontCm < FRONT_LOW_CM) return OBJECT_LOW;
+  
+  if (frontConnected) {
+    if (frontCm < FRONT_NEAR_CM)   return OBJECT_NEAR;
+    if (frontCm < FRONT_MEDIUM_CM) return OBJECT_MEDIUM;
+    if (frontCm < FRONT_LOW_CM)    return OBJECT_LOW;
+  }
+
   return NORMAL;
 }
 
@@ -236,6 +265,7 @@ void updateOutputs(AlertState state) {
 
 const __FlashStringHelper *stateName(AlertState state) {
   switch (state) {
+    case STANDBY:       return F("STANDBY (Sensor Lepas)");
     case OBJECT_LOW:    return F("OBJEK_WASPADA");
     case OBJECT_MEDIUM: return F("OBJEK_SEDANG");
     case OBJECT_NEAR:   return F("OBJEK_DEKAT");
@@ -267,8 +297,9 @@ void setup() {
   setupMPU();
   calibrateDownBaseline();
   selfTest();
-  Serial.println(F("KATANA System Online"));
-  Serial.println(F("HC-SR04 depan D2/D3 | HC-SR04 bawah D10/D11 | Water A0 | MPU A4/A5 | Buzzer D6 | Motor D5"));
+  Serial.println(F("=================================================="));
+  Serial.println(F("      KATANA SMART CANE - SYSTEM ONLINE           "));
+  Serial.println(F("=================================================="));
 }
 
 void loop() {
@@ -277,26 +308,53 @@ void loop() {
   updateOutputs(activeState);
 
   unsigned long now = millis();
-  if (now - lastReportMs >= 300) {
+  if (now - lastReportMs >= 400) {
     lastReportMs = now;
-    Serial.print(F("state="));
-    Serial.print(stateName(activeState));
-    Serial.print(F(" | depan="));
-    Serial.print(frontCm, 0);
-    Serial.print(F("cm | delta_bawah="));
-    Serial.print(dropDeltaCm);
-    Serial.print(F("cm (jarak="));
-    Serial.print(downCm, 0);
-    Serial.print(F("; baseline="));
-    Serial.print(downBaselineCm, 0);
-    Serial.print(F(")"));
-    Serial.print(F(" | air="));
+
+    // Baris 1: Status Fisik Sambungan Setiap Sensor
+    Serial.print(F("[KONEKSI] "));
+    
+    // Sensor Depan
+    Serial.print(F("Depan:"));
+    if (frontConnected) {
+      Serial.print(F("RIIL("));
+      Serial.print(frontCm, 0);
+      Serial.print(F("cm) "));
+    } else {
+      Serial.print(F("LEPAS "));
+    }
+
+    // Sensor Bawah
+    Serial.print(F("| Bawah:"));
+    if (downConnected) {
+      Serial.print(F("RIIL("));
+      Serial.print(downCm, 0);
+      Serial.print(F("cm) "));
+    } else {
+      Serial.print(F("LEPAS "));
+    }
+
+    // MPU6050
+    Serial.print(F("| IMU:"));
+    if (mpuConnected) {
+      Serial.print(F("RIIL("));
+      Serial.print(tiltDeg, 1);
+      Serial.print(F("°) "));
+    } else {
+      Serial.print(F("LEPAS "));
+    }
+
+    // Sensor Air
+    Serial.print(F("| Air:RIIL("));
     Serial.print(waterValue);
-    Serial.print(F(" | tilt="));
-    Serial.print(tiltDeg, 1);
-    Serial.print(F("deg | MOTOR="));
+    Serial.print(F(")"));
+
+    // Baris 2: Status Keputusan & Aktuator
+    Serial.print(F(" || STATE: "));
+    Serial.print(stateName(activeState));
+    Serial.print(F(" | Motor: "));
     Serial.print(vibrationOn ? F("ON") : F("OFF"));
-    Serial.print(F(" | BUZZER="));
+    Serial.print(F(" | Buzzer: "));
     Serial.println(activeState == FALL_ALERT ? F("SOS") : F("DIAM"));
   }
   delay(20);
