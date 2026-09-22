@@ -1,74 +1,69 @@
 # Blueprint Wiring Fisik KATANA (Kawan Tunanetra)
 
-Dokumen ini adalah acuan pengkabelan dan perakitan perangkat keras nyata KATANA menggunakan **Arduino Nano V3 (ATmega328P)**.
+Dokumen ini adalah acuan pengkabelan modul fisik nyata KATANA ke **Arduino Nano V3 (ATmega328P)**. Label pin di tabel ini disesuaikan persis dengan tulisan sablon (silkscreen) pada PCB modul yang dibeli.
 
 ---
 
-## 1. Tabel Pinout dan Komponen
+## 1. Tabel Pinout Persis Sesuai Tulisan Modul
 
-| Komponen | Pin Modul | Terhubung ke Arduino Nano | Sumber Daya / Catatan |
-|---|---|---|---|
-| **HC-SR04 Depan** | VCC | 5V | Jalur 5V bersama |
-| | GND | GND | Jalur GND bersama |
-| | TRIG | D3 | Pin pemicu pulsa depan |
-| | ECHO | D2 | Pin pembaca jarak depan |
-| **HC-SR04 Bawah** | VCC | 5V | Jalur 5V bersama |
-| | GND | GND | Jalur GND bersama |
-| | TRIG | D11 | Pin pemicu pulsa bawah (dipicu bergantian) |
-| | ECHO | D10 | Pin pembaca jarak lantai/turunan |
-| **Sensor Air** | VCC | 5V | Jalur 5V bersama |
-| | GND | GND | Jalur GND bersama |
-| | AO (Analog) | A0 | Pembacaan resistansi pelat air |
-| **MPU6050 (IMU)** | VCC | 5V | Jalur 5V bersama |
-| | GND | GND | Jalur GND bersama |
-| | SDA | A4 | I2C Data (0x68) |
-| | SCL | A5 | I2C Clock |
-| **Modul Motor Getar PWM** | VCC | 5V | Jalur 5V bersama |
-| | GND | GND | Jalur GND bersama |
-| | SIG (Control) | D5 | Kontrol pulsa PWM getaran gagang |
-| **Active Buzzer 3-5V** | Positif (+) | 5V | Jalur 5V bersama |
-| | Negatif (-) | Kolektor BC547 | Transistor driver NPN BC547 |
-| | Resistor 1kΩ | D6 ke Basis BC547 | Membatasi arus basis dari GPIO D6 |
-| | Emitor BC547 | GND | Jalur GND bersama |
+| Komponen | Tulisan di Modul | Terhubung ke Arduino Nano | Keterangan Fungsi |
+|---|:---:|:---:|---|
+| **Sensor Air (Water Sensor)** | **`S`** | **A0** | Sinyal Analog (Signal) |
+| | **`+`** | **5V** | Daya positif |
+| | **`-`** | **GND** | Ground |
+| **HC-SR04 Depan** | **`VCC`** | **5V** | Daya positif |
+| | **`TRIG`** | **D3** | Pemicu ultrasonik depan |
+| | **`ECHO`** | **D2** | Penerima pantulan depan |
+| | **`GND`** | **GND** | Ground |
+| **HC-SR04 Bawah** | **`VCC`** | **5V** | Daya positif |
+| | **`TRIG`** | **D11** | Pemicu ultrasonik bawah |
+| | **`ECHO`** | **D10** | Penerima pantulan bawah |
+| | **`GND`** | **GND** | Ground |
+| **MPU6050 (GY-521)** | **`VCC`** | **5V** | Daya positif |
+| | **`GND`** | **GND** | Ground |
+| | **`SCL`** | **A5** | I2C Clock |
+| | **`SDA`** | **A4** | I2C Data |
+| | *XDA, XCL, AD0, INT* | *(Kosong)* | Tidak perlu dihubungkan |
+| **Modul Motor Getar PWM** | **`IN` / `SIG` / `S`** | **D5** | Sinyal PWM getaran |
+| | **`VCC` / `+`** | **5V** | Daya positif |
+| | **`GND` / `-`** | **GND** | Ground |
+| **Active Buzzer (Bare 3-5V)** | **Kaki Panjang (+)** | **5V** | Daya positif |
+| | **Kaki Pendek (-)** | **Kolektor BC547** | Masuk ke kaki Kolektor transistor |
 
 ---
 
-## 2. Diagram Rangkaian Buzzer (Driver BC547)
+## 2. Rangkaian Driver Buzzer (Transistor BC547)
+
+Buzzer aktif membutuhkan transistor BC547 agar tidak menarik arus berlebih dari pin Arduino:
 
 ```
-       +5V ------------ (+) Buzzer Aktif (-)
-                             |
-                             | (Kolektor)
-    Pin D6 --- [ 1kΩ ] ---> B (Basis)   BC547 (NPN)
-                             | (Emitor)
-                            GND
+               +5V ------------ (+) Kaki Panjang Buzzer (-)
+                                      |
+                                      | (Kaki Kolektor)
+Pin D6 Arduino --- [ Resistor 1kΩ ] --- (Kaki Basis)    BC547 (NPN)
+                                      | (Kaki Emitor)
+                                     GND
 ```
 
-> **PERINGATAN**: Jangan menyambungkan Buzzer atau Motor getar langsung ke pin GPIO Arduino tanpa transistor atau modul driver, agar tidak merusak pin microcontroller akibat beban arus berlebih.
+*Cara mengenali kaki BC547 (sisi datar menghadap ke Anda):*
+- Kaki 1 (kiri): **Kolektor (C)** → ke Negatif Buzzer
+- Kaki 2 (tengah): **Basis (B)** → ke Resistor 1kΩ → Pin D6
+- Kaki 3 (kanan): **Emitor (E)** → ke GND
 
 ---
 
-## 3. Penempatan Fisik pada Kruk Siku
+## 3. Ringkasan Rel Daya (Breadboard)
 
-1. **Kotak Elektronik (ABS 120x70x35 mm)**:
-   - Pasang sedekat mungkin di bawah gagang kruk menggunakan 2 klem/velcro dan busa EVA 2-3 mm.
-   - Jangan mengebor poros kruk!
-   - Di dalamnya berisi: Arduino Nano, MPU6050, mini breadboard, resistor & transistor buzzer.
-2. **Motor Getar**:
-   - Ditempel di bawah genggaman (grip) tangan agar getaran terasa langsung di telapak pengguna.
-3. **HC-SR04 Depan**:
-   - Dipasang 55–65 cm dari lantai, menghadap lurus ke depan (sudut 0°).
-4. **HC-SR04 Bawah**:
-   - Dipasang 15–20 cm di atas karet kaki tongkat, menghadap 35°–45° ke arah bawah-depan.
-5. **Pelat Sensor Air**:
-   - Dipasang 2–3 cm di atas karet kaki tongkat di sisi depan. Pastikan pelat tidak menyentuh lantai secara langsung dan tidak menahan beban kruk.
+- **Semua pin 5V** dari sensor air (`+`), motor (`+`), HC-SR04 (`VCC`), MPU6050 (`VCC`), dan buzzer (`+`) disatukan ke rel **5V** Arduino Nano.
+- **Semua pin GND** dari sensor air (`-`), motor (`-`), HC-SR04 (`GND`), MPU6050 (`GND`), dan emitor BC547 disatukan ke rel **GND** Arduino Nano.
+- Daya utama Nano berasal dari kabel USB Type-C yang dicolok ke Power Bank 5V.
 
 ---
 
-## 4. Checklist Pra-Nyalakan (Pre-Power Check)
+## 4. Penempatan Fisik pada Kruk Siku
 
-- [ ] Polaritas 5V dan GND tidak terbalik di seluruh modul.
-- [ ] Seluruh jalur GND terhubung ke satu titik (common GND).
-- [ ] Pin D2, D3, D10, D11 tidak saling tertukar antara sensor depan dan sensor bawah.
-- [ ] Kabel tidak terjepit atau menutupi lubang pengatur tinggi kruk.
-- [ ] Daya disuplai melalui port USB Type-C Arduino Nano dari Power Bank 5V (jangan suntik 5V ke pin VIN).
+1. **Kotak Elektronik (ABS / wadah dekat gagang)**: Berisi Arduino Nano, MPU6050, mini breadboard, resistor 1kΩ, transistor BC547, dan buzzer.
+2. **Motor Getar**: Ditempel di bawah grip/gagang agar getaran langsung terasa di tangan.
+3. **HC-SR04 Depan**: Dipasang 55–65 cm dari lantai, menghadap lurus ke depan (0°).
+4. **HC-SR04 Bawah**: Dipasang 15–20 cm di atas karet kaki tongkat, miring 35°–45° menghadap bawah-depan.
+5. **Sensor Air**: Dipasang 2–3 cm di atas karet kaki tongkat. Pelat garis tembaga menghadap depan dan tidak menopang beban fisik.
