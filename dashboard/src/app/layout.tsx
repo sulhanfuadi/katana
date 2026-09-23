@@ -16,7 +16,14 @@ export const metadata: Metadata = {
   title: "KATANA // Monitor Tongkat Pintar Tunanetra",
   description: "Dashboard telemetri real-time untuk alat bantu navigasi kruk pintar KATANA.",
   icons: {
-    icon: "/katana-logo.png",
+    icon: [
+      { url: "/katana-logo.png", type: "image/png" },
+      { url: "/icon.png", type: "image/png", sizes: "64x64" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.ico", sizes: "any" }
+    ],
+    shortcut: "/katana-logo.png",
+    apple: "/apple-icon.png"
   },
 };
 
@@ -28,6 +35,9 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/katana-logo.png" type="image/png" />
+        <link rel="shortcut icon" href="/katana-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
