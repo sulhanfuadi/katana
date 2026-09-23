@@ -1,69 +1,106 @@
-# Blueprint Wiring Fisik KATANA (Kawan Tunanetra)
+# KATANA Physical Hardware Wiring Blueprint
 
-Dokumen ini adalah acuan pengkabelan modul fisik nyata KATANA ke **Arduino Nano V3 (ATmega328P)**. Label pin di tabel ini disesuaikan persis dengan tulisan sablon (silkscreen) pada PCB modul yang dibeli.
+> **Reference Guide for Hardware Assembly on Arduino Nano V3 (ATmega328P)**  
+> This document details the exact pin-to-pin wiring connections between physical sensor modules and the Arduino Nano V3. All module pin names in this guide match the physical PCB silkscreen labels on standard breakout boards.
 
 ---
 
-## 1. Tabel Pinout Persis Sesuai Tulisan Modul
+## 1. Pinout Mapping Table (Module Silkscreen to Microcontroller)
 
-| Komponen | Tulisan di Modul | Terhubung ke Arduino Nano | Keterangan Fungsi |
+| Component / Module | Silkscreen Label | Arduino Nano Pin | Function / Signal Description |
 |---|:---:|:---:|---|
-| **Sensor Air (Water Sensor)** | **`S`** | **A0** | Sinyal Analog (Signal) |
-| | **`+`** | **5V** | Daya positif |
-| | **`-`** | **GND** | Ground |
-| **HC-SR04 Depan** | **`VCC`** | **5V** | Daya positif |
-| | **`TRIG`** | **D3** | Pemicu ultrasonik depan |
-| | **`ECHO`** | **D2** | Penerima pantulan depan |
-| | **`GND`** | **GND** | Ground |
-| **HC-SR04 Bawah** | **`VCC`** | **5V** | Daya positif |
-| | **`TRIG`** | **D11** | Pemicu ultrasonik bawah |
-| | **`ECHO`** | **D10** | Penerima pantulan bawah |
-| | **`GND`** | **GND** | Ground |
-| **MPU6050 (GY-521)** | **`VCC`** | **5V** | Daya positif |
-| | **`GND`** | **GND** | Ground |
-| | **`SCL`** | **A5** | I2C Clock |
-| | **`SDA`** | **A4** | I2C Data |
-| | *XDA, XCL, AD0, INT* | *(Kosong)* | Tidak perlu dihubungkan |
-| **Modul Motor Getar PWM** | **`IN` / `SIG` / `S`** | **D5** | Sinyal PWM getaran |
-| | **`VCC` / `+`** | **5V** | Daya positif |
-| | **`GND` / `-`** | **GND** | Ground |
-| **Active Buzzer (Bare 3-5V)** | **Kaki Panjang (+)** | **5V** | Daya positif |
-| | **Kaki Pendek (-)** | **Kolektor BC547** | Masuk ke kaki Kolektor transistor |
+| **Conductive Water Sensor** | **`S`** | **A0** | Analog voltage signal proportional to moisture |
+| | **`+`** | **5V** | 5V DC power supply rail |
+| | **`-`** | **GND** | System ground reference |
+| **HC-SR04 (Front Obstacle)** | **`VCC`** | **5V** | 5V DC power supply rail |
+| | **`TRIG`** | **D3** | Ultrasonic trigger pulse output (10 us TTL) |
+| | **`ECHO`** | **D2** | Echo return pulse input |
+| | **`GND`** | **GND** | System ground reference |
+| **HC-SR04 (Ground Drop-off)** | **`VCC`** | **5V** | 5V DC power supply rail |
+| | **`TRIG`** | **D11** | Ultrasonic trigger pulse output (10 us TTL) |
+| | **`ECHO`** | **D10** | Echo return pulse input |
+| | **`GND`** | **GND** | System ground reference |
+| **MPU6050 (GY-521 IMU)** | **`VCC`** | **5V** | 5V DC power supply rail (onboard 3.3V LDO regulator) |
+| | **`GND`** | **GND** | System ground reference |
+| | **`SCL`** | **A5** | I2C Clock line |
+| | **`SDA`** | **A4** | I2C Data line |
+| | *XDA, XCL, AD0, INT* | *(Unconnected)* | Leave floating for standard I2C address `0x68` |
+| **Haptic Vibration Module** | **`IN` / `SIG` / `S`** | **D5** | PWM vibration control signal (0-255 duty cycle) |
+| | **`VCC` / `+`** | **5V** | 5V DC power supply rail |
+| | **`GND` / `-`** | **GND** | System ground reference |
+| **Active 5V Buzzer (Bare)** | **Long Leg (+)** | **5V** | 5V DC power supply rail |
+| | **Short Leg (-)** | **Collector (C)** | Connects to Collector of BC547 NPN transistor |
 
 ---
 
-## 2. Rangkaian Driver Buzzer (Transistor BC547)
+## 2. Active Buzzer Transistor Switch Circuit (BC547 NPN)
 
-Buzzer aktif membutuhkan transistor BC547 agar tidak menarik arus berlebih dari pin Arduino:
+Standard ATmega328P I/O pins have a maximum recommended continuous current limit of 20 mA. Driving an active magnetic buzzer directly from a digital pin can cause voltage sags or microcontroller brownouts. An external BC547 NPN transistor driver is required:
 
+```text
+               +5V (Power Rail) ------------ (+) Long Lead - Active Buzzer (-)
+                                                    |
+                                                    | (Collector Lead)
+Pin D6 Arduino --- [ 1k Ohm Resistor ] --- (Base)     BC547 (NPN)
+                                                    | (Emitter Lead)
+                                                   GND (Power Rail)
 ```
-               +5V ------------ (+) Kaki Panjang Buzzer (-)
-                                      |
-                                      | (Kaki Kolektor)
-Pin D6 Arduino --- [ Resistor 1kΩ ] --- (Kaki Basis)    BC547 (NPN)
-                                      | (Kaki Emitor)
-                                     GND
+
+### BC547 Pin Identification (Flat Face Facing You):
+- **Pin 1 (Left)**: **Collector (C)** -> Connects to the negative (short) buzzer leg.
+- **Pin 2 (Middle)**: **Base (B)** -> Connects through a 1 kOhm current-limiting resistor to Arduino pin **D6**.
+- **Pin 3 (Right)**: **Emitter (E)** -> Connects to system **GND**.
+
+---
+
+## 3. Power Distribution Rail Architecture
+
+1. **Common 5V Bus**:
+   - The 5V pin on the Arduino Nano supplies the positive bus on the mini breadboard.
+   - All `5V` / `VCC` / `+` pins from the front HC-SR04, downward HC-SR04, MPU6050, water sensor, haptic vibration driver, and buzzer positive lead tie together into this bus.
+2. **Common GND Bus**:
+   - The GND pin on the Arduino Nano supplies the ground bus on the mini breadboard.
+   - All `GND` / `-` pins from all sensors, actuators, and the BC547 emitter tie together into this bus.
+3. **Primary Power Supply**:
+   - Regulated 5V DC is supplied via the Arduino Nano USB port connected to a standard 5V 2A portable battery bank.
+
+---
+
+## 4. Physical Component Placement on Forearm Crutch
+
+For optimal ergonomic feedback and accurate environmental scanning, components should be mounted according to the following physical layout:
+
+```text
+       [ ARM CUFF ]
+           |
+       [ HANDLE ]  <--- Coreless Vibration Motor mounted underneath grip
+           |
+    [ CONTROL BOX ] <-- ABS Enclosure: Arduino Nano, MPU6050, Breadboard, BC547, Buzzer
+           |
+           |
+     [ FRONT HC-SR04 ] <--- Mounted 55-65 cm above ground, facing forward (0 deg horizon)
+           |
+           |
+     [ DOWN HC-SR04 ]  <--- Mounted 15-20 cm above rubber foot, angled 35-45 deg downward
+           |
+     [ WATER SENSOR ]  <--- Mounted 2-3 cm above rubber foot; trace side faces forward
+           |
+     [ RUBBER FOOT ]
 ```
 
-*Cara mengenali kaki BC547 (sisi datar menghadap ke Anda):*
-- Kaki 1 (kiri): **Kolektor (C)** → ke Negatif Buzzer
-- Kaki 2 (tengah): **Basis (B)** → ke Resistor 1kΩ → Pin D6
-- Kaki 3 (kanan): **Emitor (E)** → ke GND
+1. **Handle Haptic Motor**: Mounted directly beneath the grip surface using structural adhesive or silicone wrap to maximize vibration transmission to the palm.
+2. **Control Enclosure**: Secured along the upper vertical aluminum shaft below the handle, housing the Arduino Nano, MPU6050, breadboard, driver transistor, and acoustic buzzer.
+3. **Frontal Obstacle Sensor (HC-SR04)**: Mounted 55-65 cm above the floor, aligned parallel with the walking path to detect waist-to-chest-height obstacles, low hanging branches, and walls.
+4. **Ground Drop-off Sensor (HC-SR04)**: Mounted 15-20 cm above the rubber cane foot, angled at 35 to 45 degrees downward-forward to monitor road continuity and identify curbs or holes.
+5. **Conductive Water Sensor**: Positioned 2-3 cm above the bottom rubber foot. Traces must face forward and remain elevated from direct weight bearing to avoid mechanical damage.
 
 ---
 
-## 3. Ringkasan Rel Daya (Breadboard)
+## 5. Hardware Pre-Flight Checklist
 
-- **Semua pin 5V** dari sensor air (`+`), motor (`+`), HC-SR04 (`VCC`), MPU6050 (`VCC`), dan buzzer (`+`) disatukan ke rel **5V** Arduino Nano.
-- **Semua pin GND** dari sensor air (`-`), motor (`-`), HC-SR04 (`GND`), MPU6050 (`GND`), dan emitor BC547 disatukan ke rel **GND** Arduino Nano.
-- Daya utama Nano berasal dari kabel USB Type-C yang dicolok ke Power Bank 5V.
-
----
-
-## 4. Penempatan Fisik pada Kruk Siku
-
-1. **Kotak Elektronik (ABS / wadah dekat gagang)**: Berisi Arduino Nano, MPU6050, mini breadboard, resistor 1kΩ, transistor BC547, dan buzzer.
-2. **Motor Getar**: Ditempel di bawah grip/gagang agar getaran langsung terasa di tangan.
-3. **HC-SR04 Depan**: Dipasang 55–65 cm dari lantai, menghadap lurus ke depan (0°).
-4. **HC-SR04 Bawah**: Dipasang 15–20 cm di atas karet kaki tongkat, miring 35°–45° menghadap bawah-depan.
-5. **Sensor Air**: Dipasang 2–3 cm di atas karet kaki tongkat. Pelat garis tembaga menghadap depan dan tidak menopang beban fisik.
+Before applying power:
+- [ ] Verify continuity of the common ground rail across all modules.
+- [ ] Confirm the 1k Ohm resistor is in place between Pin D6 and the Base of the BC547 transistor.
+- [ ] Confirm no sensor 5V line is accidentally shorted to ground with a multimeter in resistance mode.
+- [ ] Check that MPU6050 `SDA` is tied to **A4** and `SCL` to **A5**.
+- [ ] Secure all wiring runs along the crutch shaft using cable ties or spiral wrap to prevent snagging during movement.
