@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KATANA // Monitor Tongkat Pintar Tunanetra",
-  description: "Dashboard telemetri real-time untuk alat bantu navigasi kruk pintar KATANA.",
+  title: "Katana Dashboard",
+  description: "Live Web Serial telemetry dashboard for the KATANA smart navigation cane.",
   icons: {
     icon: [
       { url: "/katana-logo.png", type: "image/png" },
@@ -44,7 +44,7 @@ export default function RootLayout({
               (function() {
                 try {
                   var saved = localStorage.getItem('katana_theme');
-                  var theme = saved || 'dark';
+                  var theme = saved || 'light';
                   var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                   if (isDark) {
                     document.documentElement.classList.add('dark');
