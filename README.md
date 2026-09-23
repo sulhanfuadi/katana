@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/katana-logo.png" alt="KATANA Logo" width="160" />
+</p>
+
 # KATANA (Kawan Tunanetra / Smart Cane Assistant)
 
 > **Intelligent Navigation & Safety Cane for the Visually Impaired**  
@@ -34,6 +38,8 @@ MPU6050 (6-Axis IMU)       ---(I2C)----->                     ---(D6+BC547)-> 85
 
 ```text
 katana/
+|-- assets/
+|   `-- katana-logo.png   # Official project emblem and logo
 |-- katana.ino            # Production firmware for physical Arduino Nano hardware
 |-- REAL_WIRING.md        # Physical pinout guide, transistor driver schematic, and assembly checklist
 |-- README.md             # Core project documentation and operation manual (English)
