@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "KATANA // Monitor Tongkat Pintar Tunanetra",
   description: "Dashboard telemetri real-time untuk alat bantu navigasi kruk pintar KATANA.",
+  icons: {
+    icon: "/katana-logo.png",
+  },
 };
 
 export default function RootLayout({

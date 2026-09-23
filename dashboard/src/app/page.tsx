@@ -491,8 +491,12 @@ export default function KatanaDashboard() {
         {/* Top Navbar */}
         <header className="flex flex-col md:flex-row md:items-center md:justify-between p-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xs gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-black flex items-center justify-center font-mono font-bold text-sm tracking-wider">
-              KT
+            <div className="w-10 h-10 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white flex items-center justify-center shrink-0">
+              <img
+                src="/katana-logo.png"
+                alt="KATANA Logo"
+                className="w-full h-full object-contain p-0.5"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
