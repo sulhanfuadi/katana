@@ -7,6 +7,7 @@
   pada semua sensor dan komponen secara otomatis tanpa perlu menebak.
 */
 
+#include <Arduino.h>
 #include <Wire.h>
 
 const byte PIN_FRONT_ECHO = 2;

@@ -8,6 +8,7 @@
   - Menampilkan status koneksi real-time setiap sensor di Serial Monitor.
 */
 
+#include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
 
