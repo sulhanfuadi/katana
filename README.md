@@ -15,6 +15,10 @@ katana/
 ├── REAL_WIRING.md        # Panduan pinout fisik, skema transistor BC547 & checklist
 ├── README.md             # Dokumentasi proyek & panduan penggunaan
 ├── .gitignore            # Filter file build dan temporary
+├── dashboard/            # Web Serial Live Telemetry Dashboard (Buka di Chrome/Brave)
+│   ├── index.html        # UI dashboard interaktif (Visual radar, kemiringan 2D, pin status)
+│   ├── style.css         # Styling dark mode & glassmorphism
+│   └── app.js            # Web Serial API handler & parser
 └── wokwi/                # Paket simulasi virtual Wokwi
     ├── sketch.ino        # Kode simulasi dengan preset WOKWI_SIMULATION = 1
     ├── diagram.json      # Skema wiring virtual komponen Wokwi
@@ -54,7 +58,17 @@ Jika beberapa kondisi bahaya terjadi secara bersamaan, sistem menerapkan **prior
 > **Tips Kalibrasi Sensor Bawah:**  
 > Saat pertama kali dinyalakan (`setup`), sistem membaca rata-rata 12 sampel jarak lantai sebagai nilai `baseline` (~30 cm). Pastikan tongkat dipegang pada posisi sudut jalan normal selama 1-2 detik pertama setelah dinyalakan.
 
-### 2. Menjalankan Simulasi Wokwi
+### 2. Membuka Web Serial Live Dashboard
+1. Buka browser **Google Chrome** atau **Brave**.
+2. Buka file `dashboard/index.html` langsung di browser:
+   ```bash
+   open dashboard/index.html
+   ```
+3. Klik tombol **Hubungkan Arduino**, lalu pilih port USB Anda (contoh: `/dev/cu.usbserial-110`).
+4. Telemetri visual real-time (radar, sudut kemiringan kruk 2D, status pin) akan langsung aktif!
+*(Tips: Tutup tab Serial Monitor di Arduino IDE sebelum menghubungkan agar port serial tidak rebutan).*
+
+### 3. Menjalankan Simulasi Wokwi
 - **Opsi A (Browser):** Buka langsung tautan [https://wokwi.com/projects/474342215789115393](https://wokwi.com/projects/474342215789115393).
 - **Opsi B (Lokal via VS Code):** Buka folder `wokwi/` menggunakan ekstensi Wokwi for VS Code.
 
