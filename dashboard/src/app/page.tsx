@@ -23,7 +23,7 @@ import {
   Check,
   Activity,
   Cpu,
-  Globe
+  Layers
 } from "lucide-react";
 
 interface TelemetryData {
@@ -33,23 +33,39 @@ interface TelemetryData {
   downCm: number | null;
   mpuConnected: boolean;
   tiltDeg: number | null;
-  waterVal: number;
+  waterConnected: boolean;
+  waterVal: number | null;
   state: string;
   motor: string;
   buzzer: string;
 }
 
+const initialTelemetryState: TelemetryData = {
+  frontConnected: false,
+  frontCm: null,
+  downConnected: false,
+  downCm: null,
+  mpuConnected: false,
+  tiltDeg: null,
+  waterConnected: false,
+  waterVal: null,
+  state: "STANDBY",
+  motor: "OFF",
+  buzzer: "DIAM"
+};
+
 const translations = {
   id: {
-    title: "Katana Dashboard",
-    badge: "TELEMETRI v1.2",
+    appTitle: "Katana Dashboard",
+    badge: "v1.2",
     subtitle: "Alat Bantu Navigasi Kruk Pintar Tunanetra // Web Serial Engine",
-    connected: "Terhubung // 115200 Baud",
-    disconnected: "Belum Tersambung",
+    connectedStatus: "ONLINE // 115200 BAUD",
+    disconnectedStatus: "OFFLINE // STANDBY",
+    demoStatus: "SIMULASI // AKTIF",
     connectBtn: "Hubungkan Arduino",
     disconnectBtn: "Putuskan USB",
-    demoActive: "DEMO: AKTIF",
-    demoInactive: "DEMO: MATI",
+    demoOn: "Demo: AKTIF",
+    demoOff: "Demo: MATI",
     demoTag: "MODE SIMULASI",
     haptic: "HAPTIC",
     buzzer: "BUZZER",
@@ -57,14 +73,14 @@ const translations = {
     idle: "IDLE (OFF)",
     sosAlarm: "ALARM SOS",
     silent: "DIAM (OFF)",
-    frontObstacle: "1. Rintangan Depan",
-    frontSub: "Ultrasonik lurus // HC-SR04",
-    downDrop: "2. Turunan / Lubang",
-    downSub: "Ultrasonik miring // HC-SR04",
-    caneTilt: "3. Kemiringan Tongkat",
-    caneSub: "Gyro / IMU 6-Axis // MPU6050",
-    waterSensor: "4. Deteksi Air / Genangan",
-    waterSub: "Pelat kontak konduktif FR-4",
+    frontObstacle: "Rintangan Depan",
+    frontSub: "HC-SR04 Lurus // Pin D2/D3",
+    downDrop: "Turunan / Lubang",
+    downSub: "HC-SR04 Miring // Pin D10/D11",
+    caneTilt: "Kemiringan Tongkat",
+    caneSub: "MPU6050 IMU // Pin A4/A5",
+    waterSensor: "Deteksi Air / Genangan",
+    waterSub: "Pelat FR-4 // Pin A0",
     online: "ONLINE",
     offline: "LEPAS",
     frontHazard: "Bahaya Rintangan",
@@ -76,26 +92,27 @@ const translations = {
     tiltReady: "Tongkat Siap",
     waterHazard: "Genangan Air Terdeteksi",
     waterClear: "Permukaan Kering",
-    baselineDelta: "Selisih Baseline:",
+    sensorDisconnected: "Sensor Lepas",
+    baselineDelta: "Selisih Lantai",
     degrees: "DERAJAT",
-    cadTitle: "Visualisasi Gerakan Nyata Rangka Tongkat (2D CAD)",
-    cadDesc: "Rangka kruk siku berputar secara fisik mengikuti sudut orientasi MPU6050 terhadap garis lantai datar",
+    cadTitle: "Visualisasi Orientasi Tongkat (2D CAD)",
+    cadDesc: "Rangka kruk siku berputar secara fisik mengikuti sudut MPU6050 terhadap lantai datar",
     cadAngle: "SUDUT:",
     floorRef: "LANTAI RUJUKAN (0 CM)",
     horizonPlanar: "HORIZON PLANAR",
     fallWarning: "[PERINGATAN] TONGKAT TERJATUH // ALARM SOS AKTIF",
-    wiringTitle: "Integritas Sambungan Kabel Fisik",
-    wiringDesc: "Pemeriksaan status sambungan pin ke modul hardware secara real-time",
-    connectedStatus: "TERHUBUNG",
-    disconnectedStatus: "LEPAS",
-    readyStatus: "SIAP",
-    terminalTitle: "TERMINAL TELEMETRI SERIAL (115200 BAUD)",
+    wiringTitle: "Integritas Pin Modul Hardware",
+    wiringDesc: "Status kelistrikan dan kontinuitas sensor ke board Arduino Nano",
+    connectedTag: "TERHUBUNG",
+    disconnectedTag: "LEPAS",
+    readyTag: "SIAP",
+    terminalTitle: "Terminal Telemetri Serial",
     autoscroll: "Autoscroll",
-    copyLogs: "Salin Log",
+    copyLogs: "Salin",
     copied: "Tersalin",
     clear: "Bersihkan",
     send: "Kirim",
-    inputPlaceholder: "Ketik perintah serial (contoh: HELP, FALL, DROP, FRONT 15, TILT 75, DEMO OFF)...",
+    inputPlaceholder: "Ketik perintah serial (HELP, FALL, DROP, FRONT 15, DEMO OFF)...",
     shortcuts: "Pintasan:",
     fallPreset: "JATUH (SOS)",
     dropPreset: "TURUNAN",
@@ -103,38 +120,37 @@ const translations = {
     nearPreset: "OBJEK DEKAT",
     normalPreset: "NORMAL",
     closeDemo: "TUTUP DEMO",
-    simTitle: "Simulasi Sensor (Wokwi Style)",
-    simOnline: "[ONLINE] Terhubung ke Arduino USB",
-    simOffline: "[OFFLINE] Mode UI Interaktif",
-    instantScenarios: "Skenario Cepat Instan:",
+    simTitle: "Panel Simulasi Hardware (Wokwi Style)",
+    simOnline: "[ONLINE] Perintah diteruskan ke Arduino fisik",
+    simOffline: "[OFFLINE] Mode UI interaktif",
+    instantScenarios: "Skenario Bahaya:",
     caneFallSOS: "Tongkat Jatuh (SOS)",
     cliffEdge: "Tepi Jurang (+25cm)",
     puddleWater: "Genangan Air (>650)",
     nearObstacle: "Objek Dekat (14cm)",
-    resetNormal: "Reset ke Kondisi Normal Aman",
-    precisionSliders: "Pengaturan Parameter Presisi:",
-    frontDistLabel: "Jarak Depan (HC-SR04):",
+    resetNormal: "Reset Kondisi Normal",
+    precisionSliders: "Pengaturan Nilai Presisi:",
+    frontDistLabel: "Jarak Depan:",
     downDeltaLabel: "Turunan Bawah (+Delta):",
-    tiltLabel: "Kemiringan MPU6050:",
+    tiltLabel: "Kemiringan MPU:",
     waterLabel: "Sensor Air (A0):",
     wetState: "(Basah)",
     dryState: "(Kering)",
     darkTheme: "Gelap",
     lightTheme: "Terang",
-    autoTheme: "Auto",
-    systemPrompt: "[SISTEM] KATANA Telemetry Engine v1.2.0 Siap.",
-    infoPrompt: "[INFO] Hubungkan USB Arduino Nano atau aktifkan Mode Demo untuk simulasi."
+    autoTheme: "Auto"
   },
   en: {
-    title: "Katana Dashboard",
-    badge: "TELEMETRY v1.2",
+    appTitle: "Katana Dashboard",
+    badge: "v1.2",
     subtitle: "Smart Navigation Forearm Crutch Assistant // Web Serial Engine",
-    connected: "Connected // 115200 Baud",
-    disconnected: "Disconnected",
+    connectedStatus: "ONLINE // 115200 BAUD",
+    disconnectedStatus: "OFFLINE // STANDBY",
+    demoStatus: "SIMULATION // ACTIVE",
     connectBtn: "Connect Arduino",
     disconnectBtn: "Disconnect USB",
-    demoActive: "DEMO: ON",
-    demoInactive: "DEMO: OFF",
+    demoOn: "Demo: ON",
+    demoOff: "Demo: OFF",
     demoTag: "SIMULATION MODE",
     haptic: "HAPTIC",
     buzzer: "BUZZER",
@@ -142,14 +158,14 @@ const translations = {
     idle: "IDLE (OFF)",
     sosAlarm: "SOS ALARM",
     silent: "SILENT (OFF)",
-    frontObstacle: "1. Front Obstacle",
-    frontSub: "Forward Ultrasonic // HC-SR04",
-    downDrop: "2. Drop-off / Pothole",
-    downSub: "Downward Ultrasonic // HC-SR04",
-    caneTilt: "3. Cane Orientation",
-    caneSub: "6-Axis IMU / Gyro // MPU6050",
-    waterSensor: "4. Water / Puddle Detection",
-    waterSub: "Conductive FR-4 Sensor Plate",
+    frontObstacle: "Front Obstacle",
+    frontSub: "Forward HC-SR04 // Pin D2/D3",
+    downDrop: "Drop-off / Pothole",
+    downSub: "Angled HC-SR04 // Pin D10/D11",
+    caneTilt: "Cane Orientation",
+    caneSub: "MPU6050 IMU // Pin A4/A5",
+    waterSensor: "Water / Puddle",
+    waterSub: "FR-4 Plate // Pin A0",
     online: "ONLINE",
     offline: "OFFLINE",
     frontHazard: "Hazardous Obstacle",
@@ -161,26 +177,27 @@ const translations = {
     tiltReady: "Upright & Ready",
     waterHazard: "Puddle Detected",
     waterClear: "Dry Surface",
-    baselineDelta: "Baseline Delta:",
+    sensorDisconnected: "Disconnected",
+    baselineDelta: "Floor Delta",
     degrees: "DEGREES",
-    cadTitle: "Real-Time Cane Orientation Visualizer (2D CAD)",
+    cadTitle: "Cane Orientation Visualizer (2D CAD)",
     cadDesc: "Forearm crutch rotates physically tracking MPU6050 orientation relative to ground plane",
     cadAngle: "ANGLE:",
     floorRef: "GROUND REFERENCE (0 CM)",
     horizonPlanar: "PLANAR HORIZON",
     fallWarning: "[WARNING] CANE FALL DETECTED // SOS ALARM ACTIVE",
-    wiringTitle: "Physical Hardware Wiring Integrity",
-    wiringDesc: "Real-time pin connection diagnostics across physical sensor modules",
-    connectedStatus: "CONNECTED",
-    disconnectedStatus: "DISCONNECTED",
-    readyStatus: "READY",
-    terminalTitle: "SERIAL TELEMETRY TERMINAL (115200 BAUD)",
+    wiringTitle: "Hardware Module Pin Diagnostics",
+    wiringDesc: "Physical electrical continuity status across Arduino Nano pins",
+    connectedTag: "CONNECTED",
+    disconnectedTag: "DISCONNECTED",
+    readyTag: "READY",
+    terminalTitle: "Serial Telemetry Terminal",
     autoscroll: "Autoscroll",
-    copyLogs: "Copy Logs",
+    copyLogs: "Copy",
     copied: "Copied",
     clear: "Clear",
     send: "Send",
-    inputPlaceholder: "Enter serial command (e.g. HELP, FALL, DROP, FRONT 15, TILT 75, DEMO OFF)...",
+    inputPlaceholder: "Enter serial command (HELP, FALL, DROP, FRONT 15, DEMO OFF)...",
     shortcuts: "Shortcuts:",
     fallPreset: "FALL (SOS)",
     dropPreset: "DROP-OFF",
@@ -188,38 +205,34 @@ const translations = {
     nearPreset: "NEAR OBSTACLE",
     normalPreset: "NORMAL",
     closeDemo: "CLOSE DEMO",
-    simTitle: "Sensor Simulation (Wokwi Style)",
-    simOnline: "[ONLINE] Synced to USB Hardware",
-    simOffline: "[OFFLINE] Interactive UI Mode",
-    instantScenarios: "Instant Hazard Presets:",
+    simTitle: "Hardware Simulation Panel (Wokwi Style)",
+    simOnline: "[ONLINE] Commands dispatched to physical Arduino",
+    simOffline: "[OFFLINE] Interactive UI mode",
+    instantScenarios: "Hazard Scenarios:",
     caneFallSOS: "Cane Fall (SOS)",
     cliffEdge: "Drop-off Edge (+25cm)",
     puddleWater: "Water Puddle (>650)",
     nearObstacle: "Near Obstacle (14cm)",
-    resetNormal: "Reset to Safe Normal State",
+    resetNormal: "Reset to Safe State",
     precisionSliders: "Precision Parameter Sliders:",
-    frontDistLabel: "Front Distance (HC-SR04):",
-    downDeltaLabel: "Ground Drop-off (+Delta):",
-    tiltLabel: "Cane Tilt Angle (MPU):",
+    frontDistLabel: "Front Distance:",
+    downDeltaLabel: "Floor Drop (+Delta):",
+    tiltLabel: "Cane Tilt (MPU):",
     waterLabel: "Water Sensor (A0):",
     wetState: "(Wet)",
     dryState: "(Dry)",
     darkTheme: "Dark",
     lightTheme: "Light",
-    autoTheme: "Auto",
-    systemPrompt: "[SYSTEM] KATANA Telemetry Engine v1.2.0 Ready.",
-    infoPrompt: "[INFO] Connect USB Arduino Nano or activate Demo Mode to simulate."
+    autoTheme: "Auto"
   }
 };
 
 export default function KatanaDashboard() {
   const [mounted, setMounted] = useState(false);
-  // Default theme set to light
   const [theme, setTheme] = useState<"dark" | "light" | "system">("light");
-  // Default language set to Indonesian (id)
   const [lang, setLang] = useState<"id" | "en">("id");
 
-  // Read saved theme and language on client mount
+  // Read saved preferences on client mount
   useEffect(() => {
     setMounted(true);
     try {
@@ -250,19 +263,8 @@ export default function KatanaDashboard() {
   const [isConnected, setIsConnected] = useState(false);
   const [portInfo, setPortInfo] = useState<string>("Belum Tersambung");
 
-  // Telemetry data
-  const [data, setData] = useState<TelemetryData>({
-    frontConnected: false,
-    frontCm: null,
-    downConnected: false,
-    downCm: null,
-    mpuConnected: false,
-    tiltDeg: null,
-    waterVal: 240,
-    state: "STANDBY",
-    motor: "OFF",
-    buzzer: "DIAM"
-  });
+  // Telemetry data (starts fully disconnected)
+  const [data, setData] = useState<TelemetryData>(initialTelemetryState);
 
   // Demo mode
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -271,14 +273,12 @@ export default function KatanaDashboard() {
   const [demoTilt, setDemoTilt] = useState(12);
   const [demoWater, setDemoWater] = useState(210);
 
-  // Command input state
+  // Command input & terminal state
   const [customCommand, setCustomCommand] = useState("");
   const [copiedLog, setCopiedLog] = useState(false);
-
-  // Raw logs
   const [logs, setLogs] = useState<string[]>([
-    "[SISTEM] KATANA Telemetry Engine v1.2.0 Siap.",
-    "[INFO] Hubungkan USB Arduino Nano atau aktifkan Mode Demo untuk simulasi."
+    "[SISTEM] KATANA Telemetry Engine v1.2 Siap.",
+    "[INFO] Hubungkan kabel serial USB Arduino Nano atau aktifkan Mode Demo untuk pemantauan."
   ]);
   const [autoscroll, setAutoscroll] = useState(true);
 
@@ -344,7 +344,8 @@ export default function KatanaDashboard() {
     const onDisconnect = () => {
       addLog("[PERINGATAN] Kabel USB Arduino dicabut dari komputer.");
       setIsConnected(false);
-      setPortInfo(lang === "id" ? "USB Terputus (Kabel Dicabut)" : "USB Disconnected (Cable Unplugged)");
+      setPortInfo("USB Terputus (Kabel Dicabut)");
+      setData(initialTelemetryState);
       if (writerRef.current) {
         try { writerRef.current.releaseLock(); } catch (e) {}
         writerRef.current = null;
@@ -357,7 +358,7 @@ export default function KatanaDashboard() {
     };
 
     const onConnect = () => {
-      addLog("[INFO] Perangkat USB terdeteksi. Klik 'Hubungkan Arduino' untuk menyambungkan.");
+      addLog("[INFO] Perangkat USB terdeteksi kembali. Klik 'Hubungkan Arduino' untuk menyambungkan.");
     };
 
     (navigator as any).serial.addEventListener("disconnect", onDisconnect);
@@ -367,7 +368,7 @@ export default function KatanaDashboard() {
       (navigator as any).serial.removeEventListener("disconnect", onDisconnect);
       (navigator as any).serial.removeEventListener("connect", onConnect);
     };
-  }, [lang]);
+  }, []);
 
   // Serial connection handlers
   const handleConnect = async () => {
@@ -381,7 +382,7 @@ export default function KatanaDashboard() {
       await port.open({ baudRate: 115200 });
       portRef.current = port;
       setIsConnected(true);
-      setPortInfo(lang === "id" ? "Terhubung // 115200 Baud" : "Connected // 115200 Baud");
+      setPortInfo("Terhubung // 115200 Baud");
       addLog("[SISTEM] Port serial USB berhasil tersambung pada 115200 baud.");
 
       const writer = port.writable.getWriter();
@@ -410,6 +411,7 @@ export default function KatanaDashboard() {
         addLog(`[INFO] Sambungan tidak dapat dibuka: ${err.message}`);
       }
       setIsConnected(false);
+      setData(initialTelemetryState);
     }
   };
 
@@ -440,7 +442,8 @@ export default function KatanaDashboard() {
         portRef.current = null;
       }
       setIsConnected(false);
-      setPortInfo(t.disconnected);
+      setPortInfo("Belum Tersambung");
+      setData(initialTelemetryState);
       addLog("[SISTEM] Sambungan USB diputuskan secara bersih.");
     } catch (err: any) {
       console.error(err);
@@ -522,7 +525,11 @@ export default function KatanaDashboard() {
 
       const water = line.match(/Air:(?:RIIL|SIM)\((\d+)\)/);
       if (water) {
+        next.waterConnected = true;
         next.waterVal = parseInt(water[1], 10);
+      } else if (line.includes("Air:LEPAS")) {
+        next.waterConnected = false;
+        next.waterVal = null;
       }
 
       const st = line.match(/STATE:\s*([^|]+)/);
@@ -553,6 +560,9 @@ export default function KatanaDashboard() {
       sendSerial(`WATER ${demoWater}`);
     } else {
       sendSerial("DEMO OFF");
+      if (!isConnected) {
+        setData(initialTelemetryState);
+      }
     }
   };
 
@@ -610,7 +620,13 @@ export default function KatanaDashboard() {
 
   // Demo fallback simulation tick when USB is not connected
   useEffect(() => {
-    if (!isDemoMode || isConnected) return;
+    if (!isDemoMode) {
+      if (!isConnected) {
+        setData(initialTelemetryState);
+      }
+      return;
+    }
+    if (isConnected) return;
 
     let st = "NORMAL";
     let mot = "OFF";
@@ -642,12 +658,13 @@ export default function KatanaDashboard() {
       downCm: 30 + demoDown,
       mpuConnected: true,
       tiltDeg: demoTilt,
+      waterConnected: true,
       waterVal: demoWater,
       state: st,
       motor: mot,
       buzzer: buz
     });
-  }, [isDemoMode, demoFront, demoDown, demoTilt, demoWater]);
+  }, [isDemoMode, isConnected, demoFront, demoDown, demoTilt, demoWater]);
 
   // Derived banner styling and state descriptions with full i18n
   const getBannerDetails = () => {
@@ -727,952 +744,781 @@ export default function KatanaDashboard() {
   const banner = getBannerDetails();
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="min-h-screen bg-zinc-100/60 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-4">
         
-        {/* Top Navbar */}
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between p-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white flex items-center justify-center shrink-0 shadow-xs">
+        {/* Streamlined Single-Line Header */}
+        <header className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xs">
+          
+          {/* Brand Left */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white flex items-center justify-center shrink-0">
               <img
                 src="/katana-logo.png"
                 alt="KATANA Logo"
                 className="w-full h-full object-contain p-0.5"
               />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-base tracking-tight text-zinc-900 dark:text-white">
-                  {t.title}
-                </h1>
-                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 font-semibold">
-                  {t.badge}
-                </span>
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    isConnected
-                      ? "bg-emerald-500 animate-pulse"
-                      : isDemoMode
-                      ? "bg-amber-500 animate-pulse"
-                      : "bg-zinc-400 dark:bg-zinc-600"
-                  }`}
-                  title={isConnected ? "Online Hardware" : isDemoMode ? "Mode Demo" : "Standby"}
-                />
-              </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                {t.subtitle}
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm tracking-tight text-zinc-950 dark:text-white">
+                {t.appTitle}
+              </span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 font-semibold">
+                {t.badge}
+              </span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Language Selector Segmented Control */}
+          {/* Controls Right - All on one sleek horizontal row */}
+          <div className="flex items-center gap-2">
+            
+            {/* Connection Status Pill */}
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-mono">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isConnected
+                    ? "bg-emerald-500 animate-pulse"
+                    : isDemoMode
+                    ? "bg-amber-500 animate-pulse"
+                    : "bg-zinc-400 dark:bg-zinc-600"
+                }`}
+              />
+              <span className="text-zinc-600 dark:text-zinc-400 text-[11px] font-semibold">
+                {isConnected ? t.connectedStatus : isDemoMode ? t.demoStatus : t.disconnectedStatus}
+              </span>
+            </div>
+
+            {/* Language Switcher [ID | EN] */}
             <div
               suppressHydrationWarning
-              className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 text-xs font-mono font-medium"
+              className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-0.5 text-xs font-mono font-medium"
             >
               <button
                 onClick={() => handleSetLang("id")}
-                className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer text-[11px] ${
                   lang === "id"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-bold"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs font-bold"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                 }`}
-                title="Bahasa Indonesia (Bawaan)"
+                title="Bahasa Indonesia"
               >
                 ID
               </button>
               <button
                 onClick={() => handleSetLang("en")}
-                className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer text-[11px] ${
                   lang === "en"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-bold"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs font-bold"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                 }`}
-                title="English (US)"
+                title="English"
               >
                 EN
               </button>
             </div>
 
-            {/* Theme Selector Segmented Control */}
+            {/* Theme Selector */}
             <div
               suppressHydrationWarning
-              className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 text-xs font-medium"
+              className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-0.5 text-xs font-medium"
             >
               <button
                 onClick={() => setTheme("light")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                   (mounted ? theme : "light") === "light"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-semibold"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs font-semibold"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                 }`}
-                title="Mode Terang (Bawaan)"
+                title="Mode Terang"
               >
                 <Sun className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t.lightTheme}</span>
               </button>
               <button
                 onClick={() => setTheme("dark")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                   (mounted ? theme : "light") === "dark"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-semibold"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs font-semibold"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                 }`}
                 title="Mode Gelap"
               >
                 <Moon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t.darkTheme}</span>
               </button>
               <button
                 onClick={() => setTheme("system")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                   (mounted ? theme : "light") === "system"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-semibold"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs font-semibold"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                 }`}
-                title="Ikuti Tema Sistem"
+                title="Ikuti Sistem"
               >
                 <Laptop className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t.autoTheme}</span>
               </button>
             </div>
 
-            {/* Connection Status Pill */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono">
-              <Cpu className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="text-zinc-600 dark:text-zinc-300">{isConnected ? t.connected : portInfo}</span>
-            </div>
+            {/* Demo Toggle Button */}
+            <button
+              onClick={() => toggleDemoMode(!isDemoMode)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-medium transition-all cursor-pointer ${
+                isDemoMode
+                  ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-2xs"
+                  : "bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isDemoMode ? "bg-emerald-400 animate-pulse" : "bg-zinc-400"
+                }`}
+              />
+              <span className="text-[11px] font-semibold">{isDemoMode ? t.demoOn : t.demoOff}</span>
+            </button>
 
-            {/* Serial Connect Button */}
+            {/* Connect USB Button */}
             {!isConnected ? (
               <button
                 onClick={handleConnect}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-semibold text-xs rounded-xl transition-all shadow-xs cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-semibold text-xs rounded-lg transition-all shadow-2xs cursor-pointer"
               >
-                <Usb className="w-4 h-4" />
+                <Usb className="w-3.5 h-3.5" />
                 <span>{t.connectBtn}</span>
               </button>
             ) : (
               <button
                 onClick={handleDisconnect}
-                className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 font-semibold text-xs rounded-xl transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 font-semibold text-xs rounded-lg transition-all cursor-pointer"
               >
-                <Unplug className="w-4 h-4" />
+                <Unplug className="w-3.5 h-3.5" />
                 <span>{t.disconnectBtn}</span>
               </button>
             )}
-
-            {/* Interactive Demo Mode Toggle Pill */}
-            <button
-              onClick={() => toggleDemoMode(!isDemoMode)}
-              className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
-                isDemoMode
-                  ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm"
-                  : "bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-              }`}
-            >
-              <div
-                className={`w-6 h-3.5 rounded-full p-0.5 transition-colors ${
-                  isDemoMode ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
-                }`}
-              >
-                <div
-                  className={`w-2.5 h-2.5 rounded-full bg-white transition-transform ${
-                    isDemoMode ? "translate-x-2.5" : "translate-x-0"
-                  }`}
-                />
-              </div>
-              <span className="font-mono text-xs">
-                {isDemoMode ? t.demoActive : t.demoInactive}
-              </span>
-            </button>
           </div>
         </header>
 
-        {/* Master Telemetry State Banner */}
-        <section
-          className={`p-6 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xs ${
-            banner.type === "danger"
-              ? "bg-rose-50/80 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800/80"
-              : banner.type === "warning"
-              ? "bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80"
-              : banner.type === "normal"
-              ? "bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/80"
-              : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-          }`}
-        >
-          <div className="space-y-1.5 max-w-3xl">
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded-md ${
-                  banner.type === "danger"
-                    ? "bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300"
-                    : banner.type === "warning"
-                    ? "bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300"
-                    : banner.type === "normal"
-                    ? "bg-emerald-200 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300"
-                    : "bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
-                }`}
-              >
-                {banner.tag}
-              </span>
-              {isDemoMode && (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold">
-                  {t.demoTag}
-                </span>
-              )}
-            </div>
-            <h2 className="text-xl md:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-              {banner.title}
-            </h2>
-            <p className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              {banner.desc}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            {/* Haptic Actuator Indicator */}
-            <div className="flex flex-col px-4 py-3 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 min-w-[145px] shadow-xs">
-              <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
-                <span className="flex items-center gap-1 font-semibold">
-                  <Vibrate className="w-3.5 h-3.5 text-zinc-500" /> {t.haptic}
-                </span>
-                <span className="text-[9px] px-1.5 py-0.2 bg-zinc-100 dark:bg-zinc-800 rounded font-mono">D5 PWM</span>
-              </span>
-              <span
-                className={`text-sm font-extrabold font-mono mt-1 ${
-                  data.motor === "ON"
-                    ? "text-amber-600 dark:text-amber-400 flex items-center gap-1.5"
-                    : "text-zinc-500 dark:text-zinc-400"
-                }`}
-              >
-                {data.motor === "ON" ? (
-                  <>
-                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                    {t.vibrating}
-                  </>
-                ) : (
-                  t.idle
-                )}
-              </span>
-            </div>
-
-            {/* Acoustic Buzzer SOS Indicator */}
-            <div className="flex flex-col px-4 py-3 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 min-w-[145px] shadow-xs">
-              <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
-                <span className="flex items-center gap-1 font-semibold">
-                  <Volume2 className="w-3.5 h-3.5 text-zinc-500" /> {t.buzzer}
-                </span>
-                <span className="text-[9px] px-1.5 py-0.2 bg-zinc-100 dark:bg-zinc-800 rounded font-mono">D6 BC547</span>
-              </span>
-              <span
-                className={`text-sm font-extrabold font-mono mt-1 ${
-                  data.buzzer.includes("SOS")
-                    ? "text-rose-600 dark:text-rose-400 flex items-center gap-1.5"
-                    : "text-zinc-500 dark:text-zinc-400"
-                }`}
-              >
-                {data.buzzer.includes("SOS") ? (
-                  <>
-                    <span className="inline-block w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                    {t.sosAlarm}
-                  </>
-                ) : (
-                  t.silent
-                )}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* 4 Core Sensor Telemetry Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Master Telemetry Workstation Console (Unified Surface, Anti-Slop) */}
+        <main className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden divide-y divide-zinc-200 dark:divide-zinc-800">
           
-          {/* Card 1: Front Obstacle HC-SR04 */}
-          <div className="p-5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col justify-between space-y-4 shadow-xs">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-zinc-500" />
-                  {t.frontObstacle}
-                </span>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  {t.frontSub}
-                </p>
-              </div>
-              <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-semibold ${
-                  data.frontConnected
-                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                    : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-800"
-                }`}
-              >
-                {data.frontConnected ? t.online : t.offline}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
-                {data.frontConnected && data.frontCm !== null ? data.frontCm : "--"}
-              </span>
-              <span className="text-xs font-bold text-zinc-400 font-mono">CM</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-900 rounded-full overflow-hidden flex">
-                <div
-                  className={`h-full transition-all duration-200 ${
-                    !data.frontConnected || data.frontCm === null
-                      ? "bg-zinc-300 dark:bg-zinc-700"
-                      : data.frontCm < 30
-                      ? "bg-rose-500"
-                      : data.frontCm < 60
-                      ? "bg-amber-500"
-                      : "bg-emerald-500"
+          {/* Sub-Header: Mission Status Ribbon */}
+          <div
+            className={`px-5 py-4 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+              banner.type === "danger"
+                ? "bg-rose-50/80 dark:bg-rose-950/30"
+                : banner.type === "warning"
+                ? "bg-amber-50/80 dark:bg-amber-950/30"
+                : banner.type === "normal"
+                ? "bg-emerald-50/80 dark:bg-emerald-950/30"
+                : "bg-zinc-50/50 dark:bg-zinc-900/40"
+            }`}
+          >
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded ${
+                    banner.type === "danger"
+                      ? "bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300"
+                      : banner.type === "warning"
+                      ? "bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300"
+                      : banner.type === "normal"
+                      ? "bg-emerald-200 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300"
+                      : "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
                   }`}
-                  style={{
-                    width: `${
-                      data.frontConnected && data.frontCm !== null
-                        ? Math.min(100, Math.max(5, (1 - data.frontCm / 150) * 100))
-                        : 0
-                    }%`
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
-                <span>0 cm</span>
-                <span>60 cm</span>
-                <span>&gt;100 cm</span>
-              </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-900 flex justify-between items-center text-xs">
-              <span className="text-[11px] font-mono text-zinc-400">PIN D2/D3</span>
-              <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
-                {!data.frontConnected
-                  ? t.offline
-                  : data.frontCm! < 30
-                  ? t.frontHazard
-                  : data.frontCm! < 60
-                  ? t.frontCaution
-                  : t.frontClear}
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: Ground Drop-off / Pothole HC-SR04 */}
-          <div className="p-5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col justify-between space-y-4 shadow-xs">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                  <TrendingDown className="w-4 h-4 text-zinc-500" />
-                  {t.downDrop}
+                >
+                  {banner.tag}
                 </span>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  {t.downSub}
-                </p>
+                {isDemoMode && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold">
+                    {t.demoTag}
+                  </span>
+                )}
               </div>
-              <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-semibold ${
-                  data.downConnected
-                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                    : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-800"
-                }`}
-              >
-                {data.downConnected ? t.online : t.offline}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
-                {data.downConnected && data.downCm !== null ? data.downCm : "--"}
-              </span>
-              <span className="text-xs font-bold text-zinc-400 font-mono">CM</span>
-            </div>
-
-            <div className="flex justify-between items-center px-3 py-1.5 bg-zinc-50 dark:bg-zinc-900/80 rounded-lg text-xs font-mono border border-zinc-200/50 dark:border-zinc-800/50">
-              <span className="text-zinc-500 text-[11px]">{t.baselineDelta}</span>
-              <span
-                className={`font-bold ${
-                  data.downConnected && data.downCm !== null && data.downCm - 30 > 15
-                    ? "text-rose-600 dark:text-rose-400"
-                    : "text-zinc-900 dark:text-zinc-100"
-                }`}
-              >
-                +{data.downConnected && data.downCm !== null ? Math.max(0, data.downCm - 30) : 0} cm
-              </span>
-            </div>
-
-            <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-900 flex justify-between items-center text-xs">
-              <span className="text-[11px] font-mono text-zinc-400">PIN D10/D11</span>
-              <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
-                {!data.downConnected
-                  ? t.offline
-                  : data.downCm! - 30 > 15
-                  ? t.downHazard
-                  : t.downClear}
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Cane Tilt & Fall Detection MPU6050 */}
-          <div className="p-5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col justify-between space-y-4 shadow-xs">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                  <Compass className="w-4 h-4 text-zinc-500" />
-                  {t.caneTilt}
-                </span>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  {t.caneSub}
-                </p>
-              </div>
-              <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-semibold ${
-                  data.mpuConnected
-                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                    : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-800"
-                }`}
-              >
-                {data.mpuConnected ? t.online : t.offline}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
-                {data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg.toFixed(1) : "--"}
-              </span>
-              <span className="text-xs font-bold text-zinc-400 font-mono">{t.degrees}</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-900 rounded-full overflow-hidden flex">
-                <div
-                  className={`h-full transition-all duration-200 ${
-                    !data.mpuConnected || data.tiltDeg === null
-                      ? "bg-zinc-300 dark:bg-zinc-700"
-                      : data.tiltDeg > 60
-                      ? "bg-rose-500"
-                      : "bg-zinc-900 dark:bg-white"
-                  }`}
-                  style={{
-                    width: `${
-                      data.mpuConnected && data.tiltDeg !== null
-                        ? Math.min(100, Math.max(5, (data.tiltDeg / 90) * 100))
-                        : 0
-                    }%`
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
-                <span>0°</span>
-                <span>60°</span>
-                <span>90°</span>
-              </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-900 flex justify-between items-center text-xs">
-              <span className="text-[11px] font-mono text-zinc-400">PIN A4/A5 I2C</span>
-              <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
-                {!data.mpuConnected
-                  ? t.offline
-                  : data.tiltDeg! > 60
-                  ? t.tiltHazard
-                  : t.tiltReady}
-              </span>
-            </div>
-          </div>
-
-          {/* Card 4: Water Surface Sensor */}
-          <div className="p-5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col justify-between space-y-4 shadow-xs">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                  <Droplets className="w-4 h-4 text-zinc-500" />
-                  {t.waterSensor}
-                </span>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  {t.waterSub}
-                </p>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                {t.online}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
-                {data.waterVal}
-              </span>
-              <span className="text-xs font-bold text-zinc-400 font-mono">/ 1023</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-900 rounded-full overflow-hidden flex">
-                <div
-                  className={`h-full transition-all duration-200 ${
-                    data.waterVal > 650 ? "bg-sky-500" : "bg-zinc-400 dark:bg-zinc-600"
-                  }`}
-                  style={{
-                    width: `${Math.min(100, Math.max(5, (data.waterVal / 1023) * 100))}%`
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
-                <span>0</span>
-                <span>650</span>
-                <span>1023</span>
-              </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-900 flex justify-between items-center text-xs">
-              <span className="text-[11px] font-mono text-zinc-400">PIN A0 ANALOG</span>
-              <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
-                {data.waterVal > 650 ? t.waterHazard : t.waterClear}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* CAD Blueprint & Wiring Verification Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          
-          {/* Visual 2D Cane CAD Representation */}
-          <div className="lg:col-span-3 p-6 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-zinc-500" />
-                  {t.cadTitle}
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {t.cadDesc}
-                </p>
-              </div>
-              <span className="font-mono text-xs font-bold px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl self-start sm:self-auto">
-                {t.cadAngle} {data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg.toFixed(1) : "0.0"}°
-              </span>
-            </div>
-
-            {/* CAD Simulation Canvas with Blueprint Grid */}
-            <div className="h-72 bg-blueprint-grid bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 relative flex items-center justify-center overflow-hidden">
-              
-              {/* Technical Protractor Guidelines */}
-              <div className="absolute bottom-8 w-72 h-36 border-t border-l border-r border-dashed border-zinc-300 dark:border-zinc-800 rounded-t-full pointer-events-none" />
-              <div className="absolute bottom-8 w-48 h-24 border-t border-l border-r border-dashed border-zinc-200 dark:border-zinc-850 rounded-t-full pointer-events-none" />
-
-              {/* Angle Tick Marks */}
-              <span className="absolute bottom-9 left-10 text-[9px] font-mono text-zinc-400">80°</span>
-              <span className="absolute bottom-28 left-20 text-[9px] font-mono text-zinc-400">60°</span>
-              <span className="absolute top-10 text-[9px] font-mono text-zinc-400">0°</span>
-              <span className="absolute bottom-28 right-20 text-[9px] font-mono text-zinc-400">30°</span>
-
-              {/* Floor Horizon Line */}
-              <div className="absolute bottom-8 left-0 right-0 h-0.5 bg-zinc-300 dark:bg-zinc-700 flex justify-between px-4">
-                <span className="text-[10px] text-zinc-400 font-mono -mt-4">{t.floorRef}</span>
-                <span className="text-[10px] text-zinc-400 font-mono -mt-4">{t.horizonPlanar}</span>
-              </div>
-
-              {/* Virtual Cane Vector */}
-              <div
-                className="w-1.5 bg-zinc-900 dark:bg-white h-48 absolute bottom-8 origin-bottom transition-transform duration-200 ease-out"
-                style={{
-                  transform: `rotate(${Math.min(85, data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg : 0)}deg)`
-                }}
-              >
-                {/* Arm Cuff & Handle Bracket */}
-                <div className="w-8 h-2 bg-zinc-900 dark:bg-white -left-6.5 -top-3 absolute rounded-xs" />
-                <div className="w-7 h-2 bg-zinc-900 dark:bg-white -left-5.5 top-12 absolute rounded-xs shadow-xs" />
-                
-                {/* Ultrasonic Sensor Nodes */}
-                <div className="w-3 h-3 rounded-full bg-emerald-500 -left-0.75 top-22 absolute border border-white shadow-xs" title="HC-SR04 Depan" />
-                <div className="w-3 h-3 rounded-full bg-sky-500 -left-0.75 bottom-8 absolute border border-white shadow-xs" title="HC-SR04 Bawah" />
-                
-                {/* Rubber Tip Foot */}
-                <div className="w-3.5 h-2.5 bg-zinc-800 dark:bg-zinc-200 -left-1 -bottom-1 absolute rounded-xs" />
-              </div>
-
-              {/* Fall Alert Overlay */}
-              {data.mpuConnected && data.tiltDeg !== null && data.tiltDeg > 60 && (
-                <div className="absolute top-4 px-4 py-2 bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-lg border border-rose-500 animate-bounce tracking-wide flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  {t.fallWarning}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Hardware Pin Checker Deck */}
-          <div className="lg:col-span-2 p-6 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-4 shadow-xs">
-            <div>
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-zinc-500" />
-                {t.wiringTitle}
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {t.wiringDesc}
+              <h2 className="text-lg md:text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+                {banner.title}
+              </h2>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                {banner.desc}
               </p>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs">
+            {/* Actuator Status Badges */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+                <Vibrate className="w-4 h-4 text-zinc-500" />
                 <div>
-                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">1. Sensor Depan (HC-SR04)</div>
-                  <div className="text-[11px] font-mono text-zinc-500">Pin D3 (Trig) & D2 (Echo)</div>
+                  <div className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">
+                    {t.haptic} (D5 PWM)
+                  </div>
+                  <div
+                    className={`text-xs font-mono font-bold ${
+                      data.motor === "ON"
+                        ? "text-amber-600 dark:text-amber-400 animate-pulse"
+                        : "text-zinc-500"
+                    }`}
+                  >
+                    {data.motor === "ON" ? t.vibrating : t.idle}
+                  </div>
                 </div>
-                <span
-                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
-                    data.frontConnected
-                      ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
-                      : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
-                  }`}
-                >
-                  {data.frontConnected ? t.connectedStatus : t.disconnectedStatus}
-                </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs">
+              <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+                <Volume2 className="w-4 h-4 text-zinc-500" />
                 <div>
-                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">2. Sensor Bawah (HC-SR04)</div>
-                  <div className="text-[11px] font-mono text-zinc-500">Pin D11 (Trig) & D10 (Echo)</div>
+                  <div className="text-[9px] font-mono text-zinc-400 uppercase font-semibold">
+                    {t.buzzer} (D6 BC547)
+                  </div>
+                  <div
+                    className={`text-xs font-mono font-bold ${
+                      data.buzzer.includes("SOS")
+                        ? "text-rose-600 dark:text-rose-400 animate-pulse"
+                        : "text-zinc-500"
+                    }`}
+                  >
+                    {data.buzzer.includes("SOS") ? t.sosAlarm : t.silent}
+                  </div>
                 </div>
-                <span
-                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
-                    data.downConnected
-                      ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
-                      : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
-                  }`}
-                >
-                  {data.downConnected ? t.connectedStatus : t.disconnectedStatus}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs">
-                <div>
-                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">3. Sensor IMU (MPU6050)</div>
-                  <div className="text-[11px] font-mono text-zinc-500">Pin A4 (SDA) & A5 (SCL)</div>
-                </div>
-                <span
-                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
-                    data.mpuConnected
-                      ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
-                      : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
-                  }`}
-                >
-                  {data.mpuConnected ? t.connectedStatus : t.disconnectedStatus}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs">
-                <div>
-                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">4. Sensor Air (Pelat FR-4)</div>
-                  <div className="text-[11px] font-mono text-zinc-500">Pin A0 (Analog)</div>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                  {t.connectedStatus}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs">
-                <div>
-                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">5. Motor Getar (PWM)</div>
-                  <div className="text-[11px] font-mono text-zinc-500">Pin D5 (Modul Driver)</div>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                  {t.readyStatus}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs">
-                <div>
-                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">6. Buzzer Darurat SOS</div>
-                  <div className="text-[11px] font-mono text-zinc-500">Pin D6 (Transistor BC547)</div>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                  {t.readyStatus}
-                </span>
               </div>
             </div>
           </div>
-        </section>
 
-        {/* Raw Log Terminal Drawer with Interactive Command Input */}
-        <section className="p-5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-3.5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-zinc-500" />
-              <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
-                {t.terminalTitle}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1.5 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs">
-                <input
-                  type="checkbox"
-                  checked={autoscroll}
-                  onChange={(e) => setAutoscroll(e.target.checked)}
-                  className="rounded text-zinc-900"
-                />
-                <span>{t.autoscroll}</span>
-              </label>
-              <button
-                onClick={handleCopyLogs}
-                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium"
-              >
-                {copiedLog ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedLog ? t.copied : t.copyLogs}</span>
-              </button>
-              <button
-                onClick={() => setLogs([])}
-                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>{t.clear}</span>
-              </button>
-            </div>
-          </div>
+          {/* Main Workspace: 2-Column Split Console */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-zinc-200 dark:divide-zinc-800">
+            
+            {/* Left 7 Columns: 2D CAD Blueprint & Integrated Sensor Strip */}
+            <div className="lg:col-span-7 flex flex-col justify-between">
+              
+              {/* CAD Canvas Header */}
+              <div className="px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-zinc-500" />
+                    {t.cadTitle}
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {t.cadDesc}
+                  </p>
+                </div>
+                <span className="font-mono text-xs font-bold px-2.5 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md">
+                  {t.cadAngle} {data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg.toFixed(1) : "--"}°
+                </span>
+              </div>
 
-          <div
-            ref={logContainerRef}
-            className="h-36 bg-zinc-100 dark:bg-zinc-900 rounded-xl p-3.5 overflow-y-auto font-mono text-xs text-zinc-700 dark:text-zinc-300 space-y-1 border border-zinc-200 dark:border-zinc-800"
-          >
-            {logs.map((line, i) => (
-              <div key={i} className="leading-relaxed">
-                {line.startsWith("[KIRIM]") ? (
-                  <span className="text-sky-600 dark:text-sky-400 font-semibold">{line}</span>
-                ) : line.startsWith("[ERROR]") ? (
-                  <span className="text-rose-600 dark:text-rose-400 font-semibold">{line}</span>
-                ) : line.startsWith("[SIMULASI]") ? (
-                  <span className="text-purple-600 dark:text-purple-400 font-semibold">{line}</span>
-                ) : line.startsWith("[KONEKSI]") ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">{line}</span>
-                ) : (
-                  <span>{line}</span>
+              {/* 2D CAD Blueprint Simulation Canvas */}
+              <div className="h-72 bg-blueprint-grid bg-zinc-50 dark:bg-zinc-950 relative flex items-center justify-center overflow-hidden">
+                
+                {/* Protractor Guidelines */}
+                <div className="absolute bottom-8 w-72 h-36 border-t border-l border-r border-dashed border-zinc-300 dark:border-zinc-800 rounded-t-full pointer-events-none" />
+                <div className="absolute bottom-8 w-48 h-24 border-t border-l border-r border-dashed border-zinc-200 dark:border-zinc-850 rounded-t-full pointer-events-none" />
+
+                {/* Angle Tick Marks */}
+                <span className="absolute bottom-9 left-10 text-[9px] font-mono text-zinc-400">80°</span>
+                <span className="absolute bottom-28 left-20 text-[9px] font-mono text-zinc-400">60°</span>
+                <span className="absolute top-8 text-[9px] font-mono text-zinc-400">0°</span>
+                <span className="absolute bottom-28 right-20 text-[9px] font-mono text-zinc-400">30°</span>
+
+                {/* Floor Horizon Line */}
+                <div className="absolute bottom-8 left-0 right-0 h-0.5 bg-zinc-300 dark:bg-zinc-700 flex justify-between px-4">
+                  <span className="text-[10px] text-zinc-400 font-mono -mt-4">{t.floorRef}</span>
+                  <span className="text-[10px] text-zinc-400 font-mono -mt-4">{t.horizonPlanar}</span>
+                </div>
+
+                {/* Virtual Cane Vector */}
+                <div
+                  className="w-1.5 bg-zinc-900 dark:bg-white h-48 absolute bottom-8 origin-bottom transition-transform duration-200 ease-out"
+                  style={{
+                    transform: `rotate(${Math.min(85, data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg : 0)}deg)`
+                  }}
+                >
+                  {/* Arm Cuff & Handle Bracket */}
+                  <div className="w-8 h-2 bg-zinc-900 dark:bg-white -left-6.5 -top-3 absolute rounded-xs" />
+                  <div className="w-7 h-2 bg-zinc-900 dark:bg-white -left-5.5 top-12 absolute rounded-xs shadow-xs" />
+                  
+                  {/* Ultrasonic Sensor Nodes */}
+                  <div
+                    className={`w-3 h-3 rounded-full -left-0.75 top-22 absolute border border-white shadow-xs ${
+                      data.frontConnected ? "bg-emerald-500" : "bg-zinc-400"
+                    }`}
+                    title="HC-SR04 Depan"
+                  />
+                  <div
+                    className={`w-3 h-3 rounded-full -left-0.75 bottom-8 absolute border border-white shadow-xs ${
+                      data.downConnected ? "bg-sky-500" : "bg-zinc-400"
+                    }`}
+                    title="HC-SR04 Bawah"
+                  />
+                  
+                  {/* Rubber Tip Foot */}
+                  <div className="w-3.5 h-2.5 bg-zinc-800 dark:bg-zinc-200 -left-1 -bottom-1 absolute rounded-xs" />
+                </div>
+
+                {/* Fall Alert Overlay */}
+                {data.mpuConnected && data.tiltDeg !== null && data.tiltDeg > 60 && (
+                  <div className="absolute top-4 px-4 py-2 bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-lg border border-rose-500 animate-bounce tracking-wide flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    {t.fallWarning}
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
 
-          {/* Interactive Command Input Bar */}
-          <form onSubmit={handleSendCommand} className="flex gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3.5 top-2.5 text-zinc-400 font-mono text-xs">&gt;</span>
-              <input
-                type="text"
-                value={customCommand}
-                onChange={(e) => setCustomCommand(e.target.value)}
-                placeholder={t.inputPlaceholder}
-                className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-8 pr-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
-              />
+              {/* Integrated 4-Sensor Metric Strip (Hairline Divided, NOT repetitive cards) */}
+              <div className="border-t border-zinc-200 dark:border-zinc-800 grid grid-cols-2 sm:grid-cols-4 divide-x divide-zinc-200 dark:divide-zinc-800 bg-zinc-50/40 dark:bg-zinc-900/30">
+                
+                {/* Metric 1: Front Obstacle */}
+                <div className="p-3.5 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
+                      <Eye className="w-3 h-3 text-zinc-500" />
+                      {t.frontObstacle}
+                    </span>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                        data.frontConnected
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.frontConnected ? t.online : t.offline}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                      {data.frontConnected && data.frontCm !== null ? data.frontCm : "--"}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">cm</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate font-medium">
+                    {!data.frontConnected
+                      ? t.sensorDisconnected
+                      : data.frontCm! < 30
+                      ? t.frontHazard
+                      : data.frontCm! < 60
+                      ? t.frontCaution
+                      : t.frontClear}
+                  </div>
+                </div>
+
+                {/* Metric 2: Drop-off */}
+                <div className="p-3.5 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
+                      <TrendingDown className="w-3 h-3 text-zinc-500" />
+                      {t.downDrop}
+                    </span>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                        data.downConnected
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.downConnected ? t.online : t.offline}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                      {data.downConnected && data.downCm !== null ? data.downCm : "--"}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">cm</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate font-medium">
+                    {!data.downConnected
+                      ? t.sensorDisconnected
+                      : data.downCm! - 30 > 15
+                      ? t.downHazard
+                      : t.downClear}
+                  </div>
+                </div>
+
+                {/* Metric 3: Cane Tilt */}
+                <div className="p-3.5 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
+                      <Compass className="w-3 h-3 text-zinc-500" />
+                      {t.caneTilt}
+                    </span>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                        data.mpuConnected
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.mpuConnected ? t.online : t.offline}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                      {data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg.toFixed(1) : "--"}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">°</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate font-medium">
+                    {!data.mpuConnected
+                      ? t.sensorDisconnected
+                      : data.tiltDeg! > 60
+                      ? t.tiltHazard
+                      : t.tiltReady}
+                  </div>
+                </div>
+
+                {/* Metric 4: Water Sensor (Fixed disconnect logic) */}
+                <div className="p-3.5 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
+                      <Droplets className="w-3 h-3 text-zinc-500" />
+                      {t.waterSensor}
+                    </span>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                        data.waterConnected && data.waterVal !== null
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.waterConnected && data.waterVal !== null ? t.online : t.offline}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                      {data.waterConnected && data.waterVal !== null ? data.waterVal : "--"}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">/ 1023</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate font-medium">
+                    {!data.waterConnected || data.waterVal === null
+                      ? t.sensorDisconnected
+                      : data.waterVal > 650
+                      ? t.waterHazard
+                      : t.waterClear}
+                  </div>
+                </div>
+
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={!customCommand.trim()}
-              className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>{t.send}</span>
-            </button>
-          </form>
 
-          {/* Quick Command Pills */}
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-zinc-500 pt-1">
-            <span className="text-[10px] text-zinc-400 font-semibold">{t.shortcuts}</span>
-            <button
-              type="button"
-              onClick={() => sendSerial("HELP")}
-              className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 cursor-pointer font-medium"
-            >
-              HELP
-            </button>
-            <button
-              type="button"
-              onClick={() => triggerPreset("FALL")}
-              className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 cursor-pointer font-medium"
-            >
-              {t.fallPreset}
-            </button>
-            <button
-              type="button"
-              onClick={() => triggerPreset("DROP")}
-              className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 cursor-pointer font-medium"
-            >
-              {t.dropPreset}
-            </button>
-            <button
-              type="button"
-              onClick={() => triggerPreset("WET")}
-              className="px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/40 text-sky-600 dark:text-sky-300 border border-sky-200 dark:border-sky-900 cursor-pointer font-medium"
-            >
-              {t.wetPreset}
-            </button>
-            <button
-              type="button"
-              onClick={() => triggerPreset("NEAR")}
-              className="px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-900 cursor-pointer font-medium"
-            >
-              {t.nearPreset}
-            </button>
-            <button
-              type="button"
-              onClick={() => triggerPreset("NORMAL")}
-              className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 cursor-pointer font-medium"
-            >
-              {t.normalPreset}
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleDemoMode(false)}
-              className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 text-zinc-500 border border-zinc-200 dark:border-zinc-800 cursor-pointer ml-auto font-medium"
-            >
-              {t.closeDemo}
-            </button>
+            {/* Right 5 Columns: Diagnostics Deck & Live Terminal */}
+            <div className="lg:col-span-5 flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800 bg-zinc-50/20 dark:bg-zinc-900/10">
+              
+              {/* Hardware Pin Status Deck */}
+              <div className="p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-zinc-500" />
+                    {t.wiringTitle}
+                  </h3>
+                  <span className="text-[10px] font-mono text-zinc-400">ATmega328P</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 text-xs">
+                  
+                  {/* Pin 1: Front */}
+                  <div className="p-2 bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-semibold">Sensor Depan</div>
+                      <div className="text-[10px] font-mono text-zinc-400">D2/D3</div>
+                    </div>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                        data.frontConnected
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.frontConnected ? t.connectedTag : t.disconnectedTag}
+                    </span>
+                  </div>
+
+                  {/* Pin 2: Down */}
+                  <div className="p-2 bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-semibold">Sensor Bawah</div>
+                      <div className="text-[10px] font-mono text-zinc-400">D10/D11</div>
+                    </div>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                        data.downConnected
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.downConnected ? t.connectedTag : t.disconnectedTag}
+                    </span>
+                  </div>
+
+                  {/* Pin 3: IMU */}
+                  <div className="p-2 bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-semibold">Sensor IMU</div>
+                      <div className="text-[10px] font-mono text-zinc-400">A4/A5 I2C</div>
+                    </div>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                        data.mpuConnected
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.mpuConnected ? t.connectedTag : t.disconnectedTag}
+                    </span>
+                  </div>
+
+                  {/* Pin 4: Water (Fixed to reflect actual connection) */}
+                  <div className="p-2 bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-semibold">Sensor Air</div>
+                      <div className="text-[10px] font-mono text-zinc-400">A0 Analog</div>
+                    </div>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                        data.waterConnected && data.waterVal !== null
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {data.waterConnected && data.waterVal !== null ? t.connectedTag : t.disconnectedTag}
+                    </span>
+                  </div>
+
+                  {/* Pin 5: Motor */}
+                  <div className="p-2 bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-semibold">Motor Getar</div>
+                      <div className="text-[10px] font-mono text-zinc-400">D5 PWM</div>
+                    </div>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                      {t.readyTag}
+                    </span>
+                  </div>
+
+                  {/* Pin 6: Buzzer */}
+                  <div className="p-2 bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-semibold">Buzzer SOS</div>
+                      <div className="text-[10px] font-mono text-zinc-400">D6 BC547</div>
+                    </div>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                      {t.readyTag}
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Live Serial Console */}
+              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                    <Terminal className="w-3.5 h-3.5 text-zinc-500" />
+                    {t.terminalTitle}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleCopyLogs}
+                      className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium"
+                    >
+                      {copiedLog ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedLog ? t.copied : t.copyLogs}</span>
+                    </button>
+                    <button
+                      onClick={() => setLogs([])}
+                      className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>{t.clear}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Log Terminal Window */}
+                <div
+                  ref={logContainerRef}
+                  className="h-36 bg-zinc-100/90 dark:bg-zinc-900/90 rounded-lg p-2.5 overflow-y-auto font-mono text-[11px] text-zinc-700 dark:text-zinc-300 space-y-1 border border-zinc-200 dark:border-zinc-800"
+                >
+                  {logs.map((line, i) => (
+                    <div key={i} className="leading-relaxed">
+                      {line.startsWith("[KIRIM]") ? (
+                        <span className="text-sky-600 dark:text-sky-400 font-semibold">{line}</span>
+                      ) : line.startsWith("[ERROR]") ? (
+                        <span className="text-rose-600 dark:text-rose-400 font-semibold">{line}</span>
+                      ) : line.startsWith("[SIMULASI]") ? (
+                        <span className="text-purple-600 dark:text-purple-400 font-semibold">{line}</span>
+                      ) : line.startsWith("[KONEKSI]") ? (
+                        <span className="text-emerald-600 dark:text-emerald-400">{line}</span>
+                      ) : (
+                        <span>{line}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Terminal Command Input */}
+                <form onSubmit={handleSendCommand} className="flex gap-1.5 pt-1">
+                  <div className="relative flex-1">
+                    <span className="absolute left-2.5 top-2 text-zinc-400 font-mono text-xs">&gt;</span>
+                    <input
+                      type="text"
+                      value={customCommand}
+                      onChange={(e) => setCustomCommand(e.target.value)}
+                      placeholder={t.inputPlaceholder}
+                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-6 pr-2.5 py-1.5 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!customCommand.trim()}
+                    className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <Send className="w-3 h-3" />
+                    <span>{t.send}</span>
+                  </button>
+                </form>
+
+                {/* Command Shortcuts */}
+                <div className="flex flex-wrap items-center gap-1 text-[10px] font-mono text-zinc-500 pt-0.5">
+                  <span className="text-zinc-400 font-semibold">{t.shortcuts}</span>
+                  <button
+                    type="button"
+                    onClick={() => sendSerial("HELP")}
+                    className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                  >
+                    HELP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => triggerPreset("FALL")}
+                    className="px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 cursor-pointer"
+                  >
+                    {t.fallPreset}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => triggerPreset("DROP")}
+                    className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 cursor-pointer"
+                  >
+                    {t.dropPreset}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => triggerPreset("WET")}
+                    className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 text-sky-600 dark:text-sky-300 border border-sky-200 dark:border-sky-900 cursor-pointer"
+                  >
+                    {t.wetPreset}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => triggerPreset("NEAR")}
+                    className="px-2 py-0.5 rounded bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-900 cursor-pointer"
+                  >
+                    {t.nearPreset}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => triggerPreset("NORMAL")}
+                    className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 cursor-pointer"
+                  >
+                    {t.normalPreset}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
           </div>
-        </section>
 
+          {/* Integrated Simulation Controls (Visible when Demo Mode is Active) */}
+          {isDemoMode && (
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/60 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-emerald-500" />
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                    {t.simTitle}
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                    {isConnected ? t.simOnline : t.simOffline}
+                  </span>
+                </div>
+                <button
+                  onClick={() => toggleDemoMode(false)}
+                  className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer font-medium"
+                >
+                  {t.closeDemo}
+                </button>
+              </div>
+
+              {/* Preset Scenario Buttons & Precision Sliders in an integrated horizontal grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                
+                {/* Slider 1: Front */}
+                <div className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-1">
+                  <div className="flex justify-between font-mono text-[11px]">
+                    <span className="text-zinc-500">{t.frontDistLabel}</span>
+                    <span className="font-bold">{demoFront} cm</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="180"
+                    value={demoFront}
+                    onChange={(e) => handleSliderFront(parseInt(e.target.value, 10))}
+                    className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
+                  />
+                </div>
+
+                {/* Slider 2: Down */}
+                <div className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-1">
+                  <div className="flex justify-between font-mono text-[11px]">
+                    <span className="text-zinc-500">{t.downDeltaLabel}</span>
+                    <span className="font-bold">+{demoDown} cm</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="45"
+                    value={demoDown}
+                    onChange={(e) => handleSliderDown(parseInt(e.target.value, 10))}
+                    className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
+                  />
+                </div>
+
+                {/* Slider 3: Tilt */}
+                <div className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-1">
+                  <div className="flex justify-between font-mono text-[11px]">
+                    <span className="text-zinc-500">{t.tiltLabel}</span>
+                    <span className="font-bold">{demoTilt}°</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="85"
+                    value={demoTilt}
+                    onChange={(e) => handleSliderTilt(parseInt(e.target.value, 10))}
+                    className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
+                  />
+                </div>
+
+                {/* Slider 4: Water */}
+                <div className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg space-y-1">
+                  <div className="flex justify-between font-mono text-[11px]">
+                    <span className="text-zinc-500">{t.waterLabel}</span>
+                    <span className="font-bold">
+                      {demoWater > 650 ? `${demoWater} ${t.wetState}` : `${demoWater} ${t.dryState}`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1000"
+                    value={demoWater}
+                    onChange={(e) => handleSliderWater(parseInt(e.target.value, 10))}
+                    className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
+                  />
+                </div>
+
+              </div>
+            </div>
+          )}
+
+        </main>
       </div>
-
-      {/* Manual Demo Slider Drawer (Wokwi Style Interactive Simulator) */}
-      {isDemoMode && (
-        <aside className="fixed bottom-6 right-6 w-92 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border border-zinc-300 dark:border-zinc-700 rounded-2xl shadow-2xl p-5 z-50 space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-                <Sliders className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="font-bold text-xs text-zinc-900 dark:text-white block">
-                  {t.simTitle}
-                </span>
-                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                  {isConnected ? t.simOnline : t.simOffline}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => toggleDemoMode(false)}
-              className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer p-1 rounded-lg"
-              title={t.closeDemo}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Quick Scenario Buttons */}
-          <div className="space-y-2">
-            <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-400 uppercase block">
-              {t.instantScenarios}
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => triggerPreset("FALL")}
-                className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
-              >
-                {t.caneFallSOS}
-              </button>
-              <button
-                type="button"
-                onClick={() => triggerPreset("DROP")}
-                className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
-              >
-                {t.cliffEdge}
-              </button>
-              <button
-                type="button"
-                onClick={() => triggerPreset("WET")}
-                className="px-3 py-2 rounded-xl bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/50 border border-sky-200 dark:border-sky-900 text-sky-700 dark:text-sky-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
-              >
-                {t.puddleWater}
-              </button>
-              <button
-                type="button"
-                onClick={() => triggerPreset("NEAR")}
-                className="px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
-              >
-                {t.nearObstacle}
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => triggerPreset("NORMAL")}
-              className="w-full px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold text-center text-xs cursor-pointer transition-colors shadow-2xs"
-            >
-              {t.resetNormal}
-            </button>
-          </div>
-
-          {/* Precision Sliders */}
-          <div className="space-y-3.5 pt-3 border-t border-zinc-200 dark:border-zinc-800 text-xs">
-            <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-400 uppercase block">
-              {t.precisionSliders}
-            </span>
-
-            <div className="space-y-1">
-              <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">{t.frontDistLabel}</span>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">{demoFront} cm</span>
-              </div>
-              <input
-                type="range"
-                min="5"
-                max="180"
-                value={demoFront}
-                onChange={(e) => handleSliderFront(parseInt(e.target.value, 10))}
-                className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">{t.downDeltaLabel}</span>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">+{demoDown} cm</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="45"
-                value={demoDown}
-                onChange={(e) => handleSliderDown(parseInt(e.target.value, 10))}
-                className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">{t.tiltLabel}</span>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">{demoTilt}°</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="85"
-                value={demoTilt}
-                onChange={(e) => handleSliderTilt(parseInt(e.target.value, 10))}
-                className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">{t.waterLabel}</span>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                  {demoWater > 650 ? `${demoWater} ${t.wetState}` : `${demoWater} ${t.dryState}`}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1000"
-                value={demoWater}
-                onChange={(e) => handleSliderWater(parseInt(e.target.value, 10))}
-                className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
-              />
-            </div>
-          </div>
-        </aside>
-      )}
     </div>
   );
 }
