@@ -469,9 +469,9 @@ export default function KatanaDashboard() {
 
       readLoop(reader);
     } catch (err: any) {
-      console.error(err);
-      if (err.name === "NotFoundError") {
-        addLog("[INFO] Pemilihan port dibatalkan pengguna.");
+      if (err.name === "NotFoundError" || (err.message && err.message.includes("No port selected"))) {
+        // Pembatalan wajar oleh pengguna (menekan tombol Cancel pada dialog pemilih port browser)
+        addLog("[INFO] Pemilihan port serial USB dibatalkan oleh pengguna.");
       } else if (
         err.message &&
         (err.message.includes("busy") ||
@@ -479,11 +479,13 @@ export default function KatanaDashboard() {
           err.message.includes("Failed to open") ||
           err.message.includes("already open"))
       ) {
+        console.warn("Port USB sibuk atau sedang digunakan:", err);
         alert(
           "Port USB sedang sibuk atau dipakai aplikasi lain!\n\nPastikan Serial Monitor di Arduino IDE sudah DITUTUP sebelum mengklik 'Hubungkan Arduino' di website."
         );
         addLog("[ERROR] Port serial sedang dipakai aplikasi lain (tutup Serial Monitor di Arduino IDE).");
       } else {
+        console.error("Kesalahan koneksi serial:", err);
         addLog(`[INFO] Sambungan tidak dapat dibuka: ${err.message}`);
       }
       setIsConnected(false);
