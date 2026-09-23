@@ -15,3 +15,10 @@
 - Desain bersih, minimalis, monokrom hitam-putih kontras tinggi.
 - Hindari gaya visual klise AI generator.
 - Berikan ringkasan langsung ke tindakan konkrit tanpa basa-basi berlebih.
+
+## Git Commit & Push Workflow
+- Selalu lakukan commit secara modular dan terpisah per bagian/komponen/tugas (atomic commits per concern).
+- Pisahkan perubahan logic, UI, assets, dan dokumentasi ke dalam commit yang berbeda.
+- Gunakan pesan commit deskriptif dengan konvensi konvensional (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`).
+- Segera lakukan `git push origin main` setelah setiap commit per bagian selesai.
+
