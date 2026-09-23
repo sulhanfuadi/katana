@@ -18,7 +18,10 @@ import {
   CheckCircle2,
   Clock,
   Trash2,
-  X
+  X,
+  Send,
+  Zap,
+  Terminal
 } from "lucide-react";
 
 interface TelemetryData {
@@ -63,6 +66,9 @@ export default function KatanaDashboard() {
   const [demoTilt, setDemoTilt] = useState(12);
   const [demoWater, setDemoWater] = useState(220);
 
+  // Command input state
+  const [customCommand, setCustomCommand] = useState("");
+
   // Raw logs
   const [logs, setLogs] = useState<string[]>([
     "[SISTEM] KATANA Next.js Console Siap. Klik 'Hubungkan Arduino' atau aktifkan 'Mode Demo'."
@@ -72,6 +78,7 @@ export default function KatanaDashboard() {
   // Serial references
   const portRef = useRef<any>(null);
   const readerRef = useRef<any>(null);
+  const writerRef = useRef<any>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   // Theme effect
@@ -98,6 +105,18 @@ export default function KatanaDashboard() {
     }
   }, [logs, autoscroll]);
 
+  // Send serial command helper
+  const sendSerial = async (command: string) => {
+    if (writerRef.current) {
+      try {
+        await writerRef.current.write(command + "\n");
+        addLog(`[KIRIM] >> ${command}`);
+      } catch (err: any) {
+        console.error("Gagal mengirim perintah serial:", err);
+      }
+    }
+  };
+
   // Serial connection handlers
   const handleConnect = async () => {
     if (!("serial" in navigator)) {
@@ -113,10 +132,17 @@ export default function KatanaDashboard() {
       setPortInfo("Terhubung (115200 Baud)");
       addLog("[SISTEM] Port serial berhasil tersambung pada 115200 baud.");
 
+      // Setup stream reader
       const textDecoder = new (window as any).TextDecoderStream();
       port.readable.pipeTo(textDecoder.writable);
       const reader = textDecoder.readable.getReader();
       readerRef.current = reader;
+
+      // Setup stream writer untuk mengirim perintah balik ke Arduino
+      const textEncoder = new (window as any).TextEncoderStream();
+      textEncoder.readable.pipeTo(port.writable);
+      const writer = textEncoder.writable.getWriter();
+      writerRef.current = writer;
 
       readLoop(reader);
     } catch (err: any) {
@@ -128,6 +154,12 @@ export default function KatanaDashboard() {
 
   const handleDisconnect = async () => {
     try {
+      if (writerRef.current) {
+        try {
+          await writerRef.current.close();
+        } catch (e) {}
+        writerRef.current = null;
+      }
       if (readerRef.current) {
         await readerRef.current.cancel();
         readerRef.current = null;
@@ -174,12 +206,11 @@ export default function KatanaDashboard() {
   };
 
   const parseLine = (line: string) => {
-    if (isDemoMode) return; // Prioritize demo sliders if demo is on
-
-    if (line.includes("[KONEKSI]")) {
+    if (line.includes("[KONEKSI]") || line.includes("[SIMULASI]")) {
+      const isSim = line.includes("[SIMULASI]");
       const next: TelemetryData = { ...data };
 
-      const front = line.match(/Depan:RIIL\((\d+)cm\)/);
+      const front = line.match(/Depan:(?:RIIL|SIM)\((\d+)cm\)/);
       if (front) {
         next.frontConnected = true;
         next.frontCm = parseInt(front[1], 10);
@@ -188,7 +219,7 @@ export default function KatanaDashboard() {
         next.frontCm = null;
       }
 
-      const down = line.match(/Bawah:RIIL\((\d+)cm\)/);
+      const down = line.match(/Bawah:(?:RIIL|SIM)\((\d+)cm\)/);
       if (down) {
         next.downConnected = true;
         next.downCm = parseInt(down[1], 10);
@@ -197,7 +228,7 @@ export default function KatanaDashboard() {
         next.downCm = null;
       }
 
-      const imu = line.match(/IMU:RIIL\(([0-9.]+)°\)/);
+      const imu = line.match(/IMU:(?:RIIL|SIM)\(([0-9.]+)°\)/);
       if (imu) {
         next.mpuConnected = true;
         next.tiltDeg = parseFloat(imu[1]);
@@ -206,7 +237,7 @@ export default function KatanaDashboard() {
         next.tiltDeg = null;
       }
 
-      const water = line.match(/Air:RIIL\((\d+)\)/);
+      const water = line.match(/Air:(?:RIIL|SIM)\((\d+)\)/);
       if (water) {
         next.waterVal = parseInt(water[1], 10);
       }
@@ -221,12 +252,83 @@ export default function KatanaDashboard() {
       if (buz) next.buzzer = buz[1];
 
       setData(next);
+
+      // Sinkronkan status demo jika Arduino di sisi serial sedang di mode simulasi
+      if (isSim && !isDemoMode) {
+        setIsDemoMode(true);
+      }
     }
   };
 
-  // Demo tick
+  // Demo mode bidirectional sync
+  const toggleDemoMode = (enabled: boolean) => {
+    setIsDemoMode(enabled);
+    if (enabled) {
+      sendSerial("DEMO ON");
+      sendSerial(`FRONT ${demoFront}`);
+      sendSerial(`DOWN ${30 + demoDown}`);
+      sendSerial(`TILT ${demoTilt}`);
+      sendSerial(`WATER ${demoWater}`);
+    } else {
+      sendSerial("DEMO OFF");
+    }
+  };
+
+  const triggerPreset = (scenario: "FALL" | "DROP" | "WET" | "NEAR" | "NORMAL") => {
+    setIsDemoMode(true);
+    if (scenario === "FALL") {
+      setDemoTilt(75);
+      sendSerial("FALL");
+    } else if (scenario === "DROP") {
+      setDemoDown(25);
+      setDemoTilt(15);
+      sendSerial("DROP");
+    } else if (scenario === "WET") {
+      setDemoWater(850);
+      sendSerial("WET");
+    } else if (scenario === "NEAR") {
+      setDemoFront(12);
+      sendSerial("NEAR");
+    } else if (scenario === "NORMAL") {
+      setDemoFront(120);
+      setDemoDown(0);
+      setDemoTilt(10);
+      setDemoWater(180);
+      sendSerial("NORMAL");
+    }
+  };
+
+  const handleSliderFront = (val: number) => {
+    setDemoFront(val);
+    sendSerial(`FRONT ${val}`);
+  };
+
+  const handleSliderDown = (val: number) => {
+    setDemoDown(val);
+    sendSerial(`DOWN ${30 + val}`);
+  };
+
+  const handleSliderTilt = (val: number) => {
+    setDemoTilt(val);
+    sendSerial(`TILT ${val}`);
+  };
+
+  const handleSliderWater = (val: number) => {
+    setDemoWater(val);
+    sendSerial(`WATER ${val}`);
+  };
+
+  const handleSendCommand = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!customCommand.trim()) return;
+    const cmd = customCommand.trim();
+    sendSerial(cmd);
+    setCustomCommand("");
+  };
+
+  // Demo fallback tick (saat USB belum terhubung agar UI tetap interaktif)
   useEffect(() => {
-    if (!isDemoMode) return;
+    if (!isDemoMode || isConnected) return;
 
     let st = "NORMAL";
     let mot = "OFF";
@@ -414,7 +516,7 @@ export default function KatanaDashboard() {
 
             {/* Intuitive Demo Toggle Button */}
             <button
-              onClick={() => setIsDemoMode(!isDemoMode)}
+              onClick={() => toggleDemoMode(!isDemoMode)}
               className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                 isDemoMode
                   ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm"
@@ -865,12 +967,15 @@ export default function KatanaDashboard() {
           </div>
         </section>
 
-        {/* Raw Log Terminal Drawer */}
-        <section className="p-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl space-y-2">
+        {/* Raw Log Terminal Drawer with Interactive Command Input */}
+        <section className="p-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl space-y-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-mono font-semibold text-zinc-600 dark:text-zinc-400">
-              TERMINAL LOG DATA RAW (115200 BAUD)
-            </span>
+            <div className="flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-zinc-500" />
+              <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                TERMINAL SERIAL MONITOR (115200 BAUD)
+              </span>
+            </div>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1.5 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs">
                 <input
@@ -893,7 +998,7 @@ export default function KatanaDashboard() {
 
           <div
             ref={logContainerRef}
-            className="h-28 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 overflow-y-auto font-mono text-xs text-zinc-700 dark:text-zinc-300 space-y-1"
+            className="h-32 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 overflow-y-auto font-mono text-xs text-zinc-700 dark:text-zinc-300 space-y-1"
           >
             {logs.map((line, i) => (
               <div key={i} className="leading-relaxed">
@@ -901,32 +1006,162 @@ export default function KatanaDashboard() {
               </div>
             ))}
           </div>
+
+          {/* Interactive Serial Command Input Bar */}
+          <form onSubmit={handleSendCommand} className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-2.5 text-zinc-400 font-mono text-xs">&gt;</span>
+              <input
+                type="text"
+                value={customCommand}
+                onChange={(e) => setCustomCommand(e.target.value)}
+                placeholder="Ketik perintah serial (contoh: HELP, FALL, DROP, FRONT 15, TILT 75, DEMO OFF)..."
+                className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-7 pr-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!customCommand.trim()}
+              className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Kirim</span>
+            </button>
+          </form>
+
+          {/* Quick Command Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-zinc-500">
+            <span className="text-[10px] text-zinc-400">Pintasan Cepat:</span>
+            <button
+              type="button"
+              onClick={() => sendSerial("HELP")}
+              className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+            >
+              HELP
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerPreset("FALL")}
+              className="px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 cursor-pointer"
+            >
+              🚨 JATUH (SOS)
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerPreset("DROP")}
+              className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 cursor-pointer"
+            >
+              ⚠️ TURUNAN
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerPreset("WET")}
+              className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/40 text-sky-600 dark:text-sky-300 border border-sky-200 dark:border-sky-900 cursor-pointer"
+            >
+              💧 AIR BASAH
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerPreset("NEAR")}
+              className="px-2 py-0.5 rounded bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-900 cursor-pointer"
+            >
+              🛑 OBJEK DEKAT
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerPreset("NORMAL")}
+              className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 cursor-pointer"
+            >
+              ✅ NORMAL
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleDemoMode(false)}
+              className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 text-zinc-500 border border-zinc-200 dark:border-zinc-800 cursor-pointer ml-auto"
+            >
+              TUTUP DEMO
+            </button>
+          </div>
         </section>
 
       </div>
 
-      {/* Manual Demo Slider Drawer */}
+      {/* Manual Demo Slider Drawer (Wokwi Style Interactive Simulator) */}
       {isDemoMode && (
-        <aside className="fixed bottom-6 right-6 w-80 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl shadow-2xl p-4 z-50 space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
+        <aside className="fixed bottom-6 right-6 w-88 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-2xl shadow-2xl p-4.5 z-50 space-y-4">
+          <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
             <div className="flex items-center gap-2">
               <Sliders className="w-4 h-4 text-emerald-500" />
-              <span className="font-bold text-xs text-zinc-900 dark:text-white">
-                Simulasi Manual (Coba Tampilan)
-              </span>
+              <div>
+                <span className="font-bold text-xs text-zinc-900 dark:text-white block">
+                  Simulasi Sensor (Wokwi Style)
+                </span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                  {isConnected ? "🟢 Sinkron ke Arduino USB Fisik" : "⚪ Mode Tampilan UI (USB Lepas)"}
+                </span>
+              </div>
             </div>
             <button
-              onClick={() => setIsDemoMode(false)}
-              className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+              onClick={() => toggleDemoMode(false)}
+              className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer p-1 rounded-md"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="space-y-3 text-xs">
+          {/* Quick Scenario Buttons */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-400 uppercase block">
+              Skenario Instan (Klik Sekali):
+            </span>
+            <div className="grid grid-cols-2 gap-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => triggerPreset("FALL")}
+                className="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 font-medium text-left cursor-pointer transition-colors"
+              >
+                🚨 Tongkat Jatuh (SOS)
+              </button>
+              <button
+                type="button"
+                onClick={() => triggerPreset("DROP")}
+                className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 font-medium text-left cursor-pointer transition-colors"
+              >
+                ⚠️ Tepi Jurang (+25cm)
+              </button>
+              <button
+                type="button"
+                onClick={() => triggerPreset("WET")}
+                className="px-2.5 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/50 border border-sky-200 dark:border-sky-900 text-sky-700 dark:text-sky-300 font-medium text-left cursor-pointer transition-colors"
+              >
+                💧 Genangan Air (&gt;650)
+              </button>
+              <button
+                type="button"
+                onClick={() => triggerPreset("NEAR")}
+                className="px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 font-medium text-left cursor-pointer transition-colors"
+              >
+                🛑 Objek Dekat (12cm)
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => triggerPreset("NORMAL")}
+              className="w-full px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 font-medium text-center text-xs cursor-pointer transition-colors"
+            >
+              ✅ Kembalikan Kondisi Normal Aman
+            </button>
+          </div>
+
+          {/* Precision Sliders */}
+          <div className="space-y-3 pt-2 border-t border-zinc-200 dark:border-zinc-800 text-xs">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-400 uppercase block">
+              Atur Nilai Presisi:
+            </span>
+
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Jarak Depan:</span>
+                <span className="text-zinc-500">Jarak Depan (HC-SR04):</span>
                 <span className="font-bold">{demoFront} cm</span>
               </div>
               <input
@@ -934,14 +1169,14 @@ export default function KatanaDashboard() {
                 min="5"
                 max="180"
                 value={demoFront}
-                onChange={(e) => setDemoFront(parseInt(e.target.value, 10))}
+                onChange={(e) => handleSliderFront(parseInt(e.target.value, 10))}
                 className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
               />
             </div>
 
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Turunan / Jurang:</span>
+                <span className="text-zinc-500">Turunan Bawah (+Delta):</span>
                 <span className="font-bold">+{demoDown} cm</span>
               </div>
               <input
@@ -949,14 +1184,14 @@ export default function KatanaDashboard() {
                 min="0"
                 max="45"
                 value={demoDown}
-                onChange={(e) => setDemoDown(parseInt(e.target.value, 10))}
+                onChange={(e) => handleSliderDown(parseInt(e.target.value, 10))}
                 className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
               />
             </div>
 
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Kemiringan Tongkat:</span>
+                <span className="text-zinc-500">Kemiringan Tongkat (MPU):</span>
                 <span className="font-bold">{demoTilt}°</span>
               </div>
               <input
@@ -964,14 +1199,14 @@ export default function KatanaDashboard() {
                 min="0"
                 max="85"
                 value={demoTilt}
-                onChange={(e) => setDemoTilt(parseInt(e.target.value, 10))}
+                onChange={(e) => handleSliderTilt(parseInt(e.target.value, 10))}
                 className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
               />
             </div>
 
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Sensor Air:</span>
+                <span className="text-zinc-500">Sensor Air (A0):</span>
                 <span className="font-bold">{demoWater > 650 ? `${demoWater} (Basah)` : `${demoWater} (Kering)`}</span>
               </div>
               <input
@@ -979,7 +1214,7 @@ export default function KatanaDashboard() {
                 min="0"
                 max="1000"
                 value={demoWater}
-                onChange={(e) => setDemoWater(parseInt(e.target.value, 10))}
+                onChange={(e) => handleSliderWater(parseInt(e.target.value, 10))}
                 className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
               />
             </div>
