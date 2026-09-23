@@ -15,17 +15,15 @@ import {
   Sun,
   Laptop,
   AlertTriangle,
-  CheckCircle2,
   Trash2,
   X,
   Send,
   Terminal,
   Copy,
   Check,
-  RotateCcw,
   Activity,
   Cpu,
-  Radio
+  Globe
 } from "lucide-react";
 
 interface TelemetryData {
@@ -41,20 +39,212 @@ interface TelemetryData {
   buzzer: string;
 }
 
+const translations = {
+  id: {
+    title: "Katana Dashboard",
+    badge: "TELEMETRI v1.2",
+    subtitle: "Alat Bantu Navigasi Kruk Pintar Tunanetra // Web Serial Engine",
+    connected: "Terhubung // 115200 Baud",
+    disconnected: "Belum Tersambung",
+    connectBtn: "Hubungkan Arduino",
+    disconnectBtn: "Putuskan USB",
+    demoActive: "DEMO: AKTIF",
+    demoInactive: "DEMO: MATI",
+    demoTag: "MODE SIMULASI",
+    haptic: "HAPTIC",
+    buzzer: "BUZZER",
+    vibrating: "BERGETAR",
+    idle: "IDLE (OFF)",
+    sosAlarm: "ALARM SOS",
+    silent: "DIAM (OFF)",
+    frontObstacle: "1. Rintangan Depan",
+    frontSub: "Ultrasonik lurus // HC-SR04",
+    downDrop: "2. Turunan / Lubang",
+    downSub: "Ultrasonik miring // HC-SR04",
+    caneTilt: "3. Kemiringan Tongkat",
+    caneSub: "Gyro / IMU 6-Axis // MPU6050",
+    waterSensor: "4. Deteksi Air / Genangan",
+    waterSub: "Pelat kontak konduktif FR-4",
+    online: "ONLINE",
+    offline: "LEPAS",
+    frontHazard: "Bahaya Rintangan",
+    frontCaution: "Waspada Sedang",
+    frontClear: "Jalur Bersih",
+    downHazard: "Tepi Turunan Terbuka",
+    downClear: "Lantai Normal",
+    tiltHazard: "Posisi Jatuh (SOS)",
+    tiltReady: "Tongkat Siap",
+    waterHazard: "Genangan Air Terdeteksi",
+    waterClear: "Permukaan Kering",
+    baselineDelta: "Selisih Baseline:",
+    degrees: "DERAJAT",
+    cadTitle: "Visualisasi Gerakan Nyata Rangka Tongkat (2D CAD)",
+    cadDesc: "Rangka kruk siku berputar secara fisik mengikuti sudut orientasi MPU6050 terhadap garis lantai datar",
+    cadAngle: "SUDUT:",
+    floorRef: "LANTAI RUJUKAN (0 CM)",
+    horizonPlanar: "HORIZON PLANAR",
+    fallWarning: "[PERINGATAN] TONGKAT TERJATUH // ALARM SOS AKTIF",
+    wiringTitle: "Integritas Sambungan Kabel Fisik",
+    wiringDesc: "Pemeriksaan status sambungan pin ke modul hardware secara real-time",
+    connectedStatus: "TERHUBUNG",
+    disconnectedStatus: "LEPAS",
+    readyStatus: "SIAP",
+    terminalTitle: "TERMINAL TELEMETRI SERIAL (115200 BAUD)",
+    autoscroll: "Autoscroll",
+    copyLogs: "Salin Log",
+    copied: "Tersalin",
+    clear: "Bersihkan",
+    send: "Kirim",
+    inputPlaceholder: "Ketik perintah serial (contoh: HELP, FALL, DROP, FRONT 15, TILT 75, DEMO OFF)...",
+    shortcuts: "Pintasan:",
+    fallPreset: "JATUH (SOS)",
+    dropPreset: "TURUNAN",
+    wetPreset: "AIR BASAH",
+    nearPreset: "OBJEK DEKAT",
+    normalPreset: "NORMAL",
+    closeDemo: "TUTUP DEMO",
+    simTitle: "Simulasi Sensor (Wokwi Style)",
+    simOnline: "[ONLINE] Terhubung ke Arduino USB",
+    simOffline: "[OFFLINE] Mode UI Interaktif",
+    instantScenarios: "Skenario Cepat Instan:",
+    caneFallSOS: "Tongkat Jatuh (SOS)",
+    cliffEdge: "Tepi Jurang (+25cm)",
+    puddleWater: "Genangan Air (>650)",
+    nearObstacle: "Objek Dekat (14cm)",
+    resetNormal: "Reset ke Kondisi Normal Aman",
+    precisionSliders: "Pengaturan Parameter Presisi:",
+    frontDistLabel: "Jarak Depan (HC-SR04):",
+    downDeltaLabel: "Turunan Bawah (+Delta):",
+    tiltLabel: "Kemiringan MPU6050:",
+    waterLabel: "Sensor Air (A0):",
+    wetState: "(Basah)",
+    dryState: "(Kering)",
+    darkTheme: "Gelap",
+    lightTheme: "Terang",
+    autoTheme: "Auto",
+    systemPrompt: "[SISTEM] KATANA Telemetry Engine v1.2.0 Siap.",
+    infoPrompt: "[INFO] Hubungkan USB Arduino Nano atau aktifkan Mode Demo untuk simulasi."
+  },
+  en: {
+    title: "Katana Dashboard",
+    badge: "TELEMETRY v1.2",
+    subtitle: "Smart Navigation Forearm Crutch Assistant // Web Serial Engine",
+    connected: "Connected // 115200 Baud",
+    disconnected: "Disconnected",
+    connectBtn: "Connect Arduino",
+    disconnectBtn: "Disconnect USB",
+    demoActive: "DEMO: ON",
+    demoInactive: "DEMO: OFF",
+    demoTag: "SIMULATION MODE",
+    haptic: "HAPTIC",
+    buzzer: "BUZZER",
+    vibrating: "VIBRATING",
+    idle: "IDLE (OFF)",
+    sosAlarm: "SOS ALARM",
+    silent: "SILENT (OFF)",
+    frontObstacle: "1. Front Obstacle",
+    frontSub: "Forward Ultrasonic // HC-SR04",
+    downDrop: "2. Drop-off / Pothole",
+    downSub: "Downward Ultrasonic // HC-SR04",
+    caneTilt: "3. Cane Orientation",
+    caneSub: "6-Axis IMU / Gyro // MPU6050",
+    waterSensor: "4. Water / Puddle Detection",
+    waterSub: "Conductive FR-4 Sensor Plate",
+    online: "ONLINE",
+    offline: "OFFLINE",
+    frontHazard: "Hazardous Obstacle",
+    frontCaution: "Moderate Caution",
+    frontClear: "Clear Path",
+    downHazard: "Drop-off Edge Detected",
+    downClear: "Normal Floor",
+    tiltHazard: "Fallen Position (SOS)",
+    tiltReady: "Upright & Ready",
+    waterHazard: "Puddle Detected",
+    waterClear: "Dry Surface",
+    baselineDelta: "Baseline Delta:",
+    degrees: "DEGREES",
+    cadTitle: "Real-Time Cane Orientation Visualizer (2D CAD)",
+    cadDesc: "Forearm crutch rotates physically tracking MPU6050 orientation relative to ground plane",
+    cadAngle: "ANGLE:",
+    floorRef: "GROUND REFERENCE (0 CM)",
+    horizonPlanar: "PLANAR HORIZON",
+    fallWarning: "[WARNING] CANE FALL DETECTED // SOS ALARM ACTIVE",
+    wiringTitle: "Physical Hardware Wiring Integrity",
+    wiringDesc: "Real-time pin connection diagnostics across physical sensor modules",
+    connectedStatus: "CONNECTED",
+    disconnectedStatus: "DISCONNECTED",
+    readyStatus: "READY",
+    terminalTitle: "SERIAL TELEMETRY TERMINAL (115200 BAUD)",
+    autoscroll: "Autoscroll",
+    copyLogs: "Copy Logs",
+    copied: "Copied",
+    clear: "Clear",
+    send: "Send",
+    inputPlaceholder: "Enter serial command (e.g. HELP, FALL, DROP, FRONT 15, TILT 75, DEMO OFF)...",
+    shortcuts: "Shortcuts:",
+    fallPreset: "FALL (SOS)",
+    dropPreset: "DROP-OFF",
+    wetPreset: "WET PUDDLE",
+    nearPreset: "NEAR OBSTACLE",
+    normalPreset: "NORMAL",
+    closeDemo: "CLOSE DEMO",
+    simTitle: "Sensor Simulation (Wokwi Style)",
+    simOnline: "[ONLINE] Synced to USB Hardware",
+    simOffline: "[OFFLINE] Interactive UI Mode",
+    instantScenarios: "Instant Hazard Presets:",
+    caneFallSOS: "Cane Fall (SOS)",
+    cliffEdge: "Drop-off Edge (+25cm)",
+    puddleWater: "Water Puddle (>650)",
+    nearObstacle: "Near Obstacle (14cm)",
+    resetNormal: "Reset to Safe Normal State",
+    precisionSliders: "Precision Parameter Sliders:",
+    frontDistLabel: "Front Distance (HC-SR04):",
+    downDeltaLabel: "Ground Drop-off (+Delta):",
+    tiltLabel: "Cane Tilt Angle (MPU):",
+    waterLabel: "Water Sensor (A0):",
+    wetState: "(Wet)",
+    dryState: "(Dry)",
+    darkTheme: "Dark",
+    lightTheme: "Light",
+    autoTheme: "Auto",
+    systemPrompt: "[SYSTEM] KATANA Telemetry Engine v1.2.0 Ready.",
+    infoPrompt: "[INFO] Connect USB Arduino Nano or activate Demo Mode to simulate."
+  }
+};
+
 export default function KatanaDashboard() {
   const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
+  // Default theme set to light
+  const [theme, setTheme] = useState<"dark" | "light" | "system">("light");
+  // Default language set to Indonesian (id)
+  const [lang, setLang] = useState<"id" | "en">("id");
 
-  // Read saved theme on client mount
+  // Read saved theme and language on client mount
   useEffect(() => {
     setMounted(true);
     try {
-      const saved = localStorage.getItem("katana_theme") as any;
-      if (saved === "dark" || saved === "light" || saved === "system") {
-        setTheme(saved);
+      const savedTheme = localStorage.getItem("katana_theme") as any;
+      if (savedTheme === "dark" || savedTheme === "light" || savedTheme === "system") {
+        setTheme(savedTheme);
+      } else {
+        setTheme("light");
+      }
+
+      const savedLang = localStorage.getItem("katana_lang") as any;
+      if (savedLang === "id" || savedLang === "en") {
+        setLang(savedLang);
       }
     } catch (e) {}
   }, []);
+
+  const t = translations[lang];
+
+  const handleSetLang = (newLang: "id" | "en") => {
+    setLang(newLang);
+    try {
+      localStorage.setItem("katana_lang", newLang);
+    } catch (e) {}
+  };
 
   // Connection state
   const [isConnected, setIsConnected] = useState(false);
@@ -98,17 +288,17 @@ export default function KatanaDashboard() {
   const writerRef = useRef<any>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Theme synchronization effect (only applies after mounted to avoid hydration conflict)
+  // Theme synchronization effect
   useEffect(() => {
     if (!mounted) return;
 
     const root = document.documentElement;
-    const applyTheme = (t: "dark" | "light" | "system") => {
+    const applyTheme = (currentTheme: "dark" | "light" | "system") => {
       let isDark = false;
-      if (t === "system") {
+      if (currentTheme === "system") {
         isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       } else {
-        isDark = t === "dark";
+        isDark = currentTheme === "dark";
       }
       root.classList.toggle("dark", isDark);
     };
@@ -154,7 +344,7 @@ export default function KatanaDashboard() {
     const onDisconnect = () => {
       addLog("[PERINGATAN] Kabel USB Arduino dicabut dari komputer.");
       setIsConnected(false);
-      setPortInfo("USB Terputus (Kabel Dicabut)");
+      setPortInfo(lang === "id" ? "USB Terputus (Kabel Dicabut)" : "USB Disconnected (Cable Unplugged)");
       if (writerRef.current) {
         try { writerRef.current.releaseLock(); } catch (e) {}
         writerRef.current = null;
@@ -177,7 +367,7 @@ export default function KatanaDashboard() {
       (navigator as any).serial.removeEventListener("disconnect", onDisconnect);
       (navigator as any).serial.removeEventListener("connect", onConnect);
     };
-  }, []);
+  }, [lang]);
 
   // Serial connection handlers
   const handleConnect = async () => {
@@ -191,7 +381,7 @@ export default function KatanaDashboard() {
       await port.open({ baudRate: 115200 });
       portRef.current = port;
       setIsConnected(true);
-      setPortInfo("Terhubung // 115200 Baud");
+      setPortInfo(lang === "id" ? "Terhubung // 115200 Baud" : "Connected // 115200 Baud");
       addLog("[SISTEM] Port serial USB berhasil tersambung pada 115200 baud.");
 
       const writer = port.writable.getWriter();
@@ -250,7 +440,7 @@ export default function KatanaDashboard() {
         portRef.current = null;
       }
       setIsConnected(false);
-      setPortInfo("Belum Tersambung");
+      setPortInfo(t.disconnected);
       addLog("[SISTEM] Sambungan USB diputuskan secara bersih.");
     } catch (err: any) {
       console.error(err);
@@ -459,62 +649,78 @@ export default function KatanaDashboard() {
     });
   }, [isDemoMode, demoFront, demoDown, demoTilt, demoWater]);
 
-  // Derived banner styling and state descriptions
+  // Derived banner styling and state descriptions with full i18n
   const getBannerDetails = () => {
     const s = data.state.toUpperCase();
+    const isId = lang === "id";
+
     if (s.includes("JATUH") || s.includes("FALL")) {
       return {
         type: "danger",
-        tag: "[BAHAYA // PRIORITAS 1]",
-        title: "TONGKAT TERJATUH // ALARM SOS AKTIF",
-        desc: "Sudut kemiringan > 60 derajat selama > 2 detik. Motor haptic dimatikan dan buzzer memancarkan sinyal Morse SOS darurat."
+        tag: isId ? "[BAHAYA // PRIORITAS 1]" : "[DANGER // PRIORITY 1]",
+        title: isId ? "TONGKAT TERJATUH // ALARM SOS AKTIF" : "CANE FALL DETECTED // SOS ALARM ACTIVE",
+        desc: isId
+          ? "Sudut kemiringan > 60 derajat selama > 2 detik. Motor haptic dimatikan dan buzzer memancarkan sinyal Morse SOS darurat."
+          : "Tilt angle exceeded 60 degrees for over 2 seconds. Haptic motor deactivated and acoustic Morse SOS alarm sounding."
       };
     }
     if (s.includes("TURUNAN") || s.includes("DROP")) {
       return {
         type: "warning",
-        tag: "[PERINGATAN // PRIORITAS 2]",
-        title: "TEPI TURUNAN / JURANG / LUBANG",
-        desc: "Jarak elevasi lantai naik > 15 cm dari baseline. Aktuator memberikan 3 pulsa getar intensitas tinggi pada gagang."
+        tag: isId ? "[PERINGATAN // PRIORITAS 2]" : "[WARNING // PRIORITY 2]",
+        title: isId ? "TEPI TURUNAN / JURANG / LUBANG" : "EDGE DROP-OFF / POTHOLE DETECTED",
+        desc: isId
+          ? "Jarak elevasi lantai naik > 15 cm dari baseline. Aktuator memberikan 3 pulsa getar intensitas tinggi pada gagang."
+          : "Floor elevation distance increased by > 15 cm above calibrated baseline. 3 high-intensity vibration pulses issued at handle."
       };
     }
     if (s.includes("BASAH") || s.includes("WATER")) {
       return {
         type: "warning",
-        tag: "[PERHATIAN // PRIORITAS 3]",
-        title: "GENANGAN AIR / PERMUKAAN BASAH",
-        desc: "Pelat konduktivitas mendeteksi cairan (A0 > 650). Aktuator memberikan 2 kali getaran panjang pada pegangan."
+        tag: isId ? "[PERHATIAN // PRIORITAS 3]" : "[CAUTION // PRIORITY 3]",
+        title: isId ? "GENANGAN AIR / PERMUKAAN BASAH" : "SURFACE WATER / PUDDLE DETECTED",
+        desc: isId
+          ? "Pelat konduktivitas mendeteksi cairan (A0 > 650). Aktuator memberikan 2 kali getaran panjang pada pegangan."
+          : "Conductive probe detected surface moisture (A0 > 650). 2 sustained vibration pulses issued to alert the user."
       };
     }
     if (s.includes("DEKAT")) {
       return {
         type: "danger",
-        tag: "[BAHAYA // PRIORITAS 4]",
-        title: "RINTANGAN SANGAT DEKAT (< 30 CM)",
-        desc: "Penghalang tepat di hadapan pengguna. Motor bergetar kontinu dengan frekuensi maksimal (PWM 240)."
+        tag: isId ? "[BAHAYA // PRIORITAS 4]" : "[DANGER // PRIORITY 4]",
+        title: isId ? "RINTANGAN SANGAT DEKAT (< 30 CM)" : "OBSTACLE VERY CLOSE (< 30 CM)",
+        desc: isId
+          ? "Penghalang tepat di hadapan pengguna. Motor bergetar kontinu dengan frekuensi maksimal (PWM 240)."
+          : "Critical obstacle directly ahead. Handle motor vibrating continuously at peak duty cycle (PWM 240)."
       };
     }
     if (s.includes("SEDANG") || s.includes("WASPADA")) {
       return {
         type: "warning",
-        tag: "[WASPADA // PRIORITAS 5]",
-        title: "RINTANGAN TERDETEKSI DI DEPAN (30-100 CM)",
-        desc: "Objek terdeteksi mendekat. Pulsa getaran ritmis di gagang memandu pengguna untuk memperlambat langkah."
+        tag: isId ? "[WASPADA // PRIORITAS 5]" : "[ALERT // PRIORITY 5]",
+        title: isId ? "RINTANGAN TERDETEKSI DI DEPAN (30-100 CM)" : "FRONTAL OBSTACLE DETECTED (30-100 CM)",
+        desc: isId
+          ? "Objek terdeteksi mendekat. Pulsa getaran ritmis di gagang memandu pengguna untuk memperlambat langkah."
+          : "Approaching obstacle detected. Rhythmic haptic pulses guide the user to slow down navigation."
       };
     }
     if (s.includes("NORMAL")) {
       return {
         type: "normal",
-        tag: "[NORMAL // JALUR BERSIH]",
-        title: "KONDISI AMAN // JALUR BEBAS HAMBATAN",
-        desc: "Seluruh sensor berada dalam batas toleransi aman. Aktuator haptic dan buzzer dalam keadaan siaga."
+        tag: isId ? "[NORMAL // JALUR BERSIH]" : "[NORMAL // PATH CLEAR]",
+        title: isId ? "KONDISI AMAN // JALUR BEBAS HAMBATAN" : "SAFE WALKING PATH // CLEAR OF HAZARDS",
+        desc: isId
+          ? "Seluruh sensor berada dalam batas toleransi aman. Aktuator haptic dan buzzer dalam keadaan siaga."
+          : "All sensory inputs are within safe nominal thresholds. Haptic and acoustic alerts in standby."
       };
     }
     return {
       type: "standby",
-      tag: "[STANDBY // MODE SIAGA]",
-      title: "MENUNGGU SAMBUNGAN PERANGKAT FISIK",
-      desc: "Hubungkan kabel serial USB Arduino Nano atau nyalakan Mode Demo untuk memulai pemantauan telemetri real-time."
+      tag: isId ? "[STANDBY // MODE SIAGA]" : "[STANDBY // AWAITING HARDWARE]",
+      title: isId ? "MENUNGGU SAMBUNGAN PERANGKAT FISIK" : "WAITING FOR HARDWARE CONNECTION",
+      desc: isId
+        ? "Hubungkan kabel serial USB Arduino Nano atau nyalakan Mode Demo untuk memulai pemantauan telemetri real-time."
+        : "Connect Arduino Nano via USB serial or toggle Demo Mode to start real-time telemetry streaming."
     };
   };
 
@@ -537,10 +743,10 @@ export default function KatanaDashboard() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-bold text-base tracking-tight text-zinc-900 dark:text-white">
-                  KATANA
+                  {t.title}
                 </h1>
                 <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 font-semibold">
-                  TELEMETRI v1.2
+                  {t.badge}
                 </span>
                 <span
                   className={`w-2 h-2 rounded-full ${
@@ -554,59 +760,88 @@ export default function KatanaDashboard() {
                 />
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Alat Bantu Navigasi Kruk Pintar Tunanetra // Web Serial Engine
+                {t.subtitle}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Language Selector Segmented Control */}
+            <div
+              suppressHydrationWarning
+              className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 text-xs font-mono font-medium"
+            >
+              <button
+                onClick={() => handleSetLang("id")}
+                className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  lang === "id"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-bold"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                }`}
+                title="Bahasa Indonesia (Bawaan)"
+              >
+                ID
+              </button>
+              <button
+                onClick={() => handleSetLang("en")}
+                className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-bold"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                }`}
+                title="English (US)"
+              >
+                EN
+              </button>
+            </div>
+
             {/* Theme Selector Segmented Control */}
             <div
               suppressHydrationWarning
               className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 text-xs font-medium"
             >
               <button
+                onClick={() => setTheme("light")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  (mounted ? theme : "light") === "light"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-semibold"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                }`}
+                title="Mode Terang (Bawaan)"
+              >
+                <Sun className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t.lightTheme}</span>
+              </button>
+              <button
                 onClick={() => setTheme("dark")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  (mounted ? theme : "dark") === "dark"
+                  (mounted ? theme : "light") === "dark"
                     ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-semibold"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                 }`}
                 title="Mode Gelap"
               >
                 <Moon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Gelap</span>
-              </button>
-              <button
-                onClick={() => setTheme("light")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  (mounted ? theme : "dark") === "light"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-semibold"
-                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
-                }`}
-                title="Mode Terang"
-              >
-                <Sun className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Terang</span>
+                <span className="hidden sm:inline">{t.darkTheme}</span>
               </button>
               <button
                 onClick={() => setTheme("system")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  (mounted ? theme : "dark") === "system"
+                  (mounted ? theme : "light") === "system"
                     ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-semibold"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                 }`}
                 title="Ikuti Tema Sistem"
               >
                 <Laptop className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Auto</span>
+                <span className="hidden sm:inline">{t.autoTheme}</span>
               </button>
             </div>
 
             {/* Connection Status Pill */}
             <div className="hidden lg:flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono">
               <Cpu className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="text-zinc-600 dark:text-zinc-300">{portInfo}</span>
+              <span className="text-zinc-600 dark:text-zinc-300">{isConnected ? t.connected : portInfo}</span>
             </div>
 
             {/* Serial Connect Button */}
@@ -616,7 +851,7 @@ export default function KatanaDashboard() {
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-semibold text-xs rounded-xl transition-all shadow-xs cursor-pointer"
               >
                 <Usb className="w-4 h-4" />
-                <span>Hubungkan Arduino</span>
+                <span>{t.connectBtn}</span>
               </button>
             ) : (
               <button
@@ -624,7 +859,7 @@ export default function KatanaDashboard() {
                 className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 font-semibold text-xs rounded-xl transition-all cursor-pointer"
               >
                 <Unplug className="w-4 h-4" />
-                <span>Putuskan USB</span>
+                <span>{t.disconnectBtn}</span>
               </button>
             )}
 
@@ -649,10 +884,7 @@ export default function KatanaDashboard() {
                 />
               </div>
               <span className="font-mono text-xs">
-                DEMO:{" "}
-                <b className={isDemoMode ? "text-emerald-400 dark:text-emerald-600 font-bold" : ""}>
-                  {isDemoMode ? "AKTIF" : "MATI"}
-                </b>
+                {isDemoMode ? t.demoActive : t.demoInactive}
               </span>
             </button>
           </div>
@@ -687,7 +919,7 @@ export default function KatanaDashboard() {
               </span>
               {isDemoMode && (
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold">
-                  MODE SIMULASI
+                  {t.demoTag}
                 </span>
               )}
             </div>
@@ -704,7 +936,7 @@ export default function KatanaDashboard() {
             <div className="flex flex-col px-4 py-3 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 min-w-[145px] shadow-xs">
               <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
                 <span className="flex items-center gap-1 font-semibold">
-                  <Vibrate className="w-3.5 h-3.5 text-zinc-500" /> HAPTIC
+                  <Vibrate className="w-3.5 h-3.5 text-zinc-500" /> {t.haptic}
                 </span>
                 <span className="text-[9px] px-1.5 py-0.2 bg-zinc-100 dark:bg-zinc-800 rounded font-mono">D5 PWM</span>
               </span>
@@ -718,10 +950,10 @@ export default function KatanaDashboard() {
                 {data.motor === "ON" ? (
                   <>
                     <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                    BERGETAR
+                    {t.vibrating}
                   </>
                 ) : (
-                  "IDLE (OFF)"
+                  t.idle
                 )}
               </span>
             </div>
@@ -730,7 +962,7 @@ export default function KatanaDashboard() {
             <div className="flex flex-col px-4 py-3 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 min-w-[145px] shadow-xs">
               <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
                 <span className="flex items-center gap-1 font-semibold">
-                  <Volume2 className="w-3.5 h-3.5 text-zinc-500" /> BUZZER
+                  <Volume2 className="w-3.5 h-3.5 text-zinc-500" /> {t.buzzer}
                 </span>
                 <span className="text-[9px] px-1.5 py-0.2 bg-zinc-100 dark:bg-zinc-800 rounded font-mono">D6 BC547</span>
               </span>
@@ -744,10 +976,10 @@ export default function KatanaDashboard() {
                 {data.buzzer.includes("SOS") ? (
                   <>
                     <span className="inline-block w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                    ALARM SOS
+                    {t.sosAlarm}
                   </>
                 ) : (
-                  "DIAM (OFF)"
+                  t.silent
                 )}
               </span>
             </div>
@@ -763,10 +995,10 @@ export default function KatanaDashboard() {
               <div>
                 <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <Eye className="w-4 h-4 text-zinc-500" />
-                  1. Rintangan Depan
+                  {t.frontObstacle}
                 </span>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Ultrasonik lurus // HC-SR04
+                  {t.frontSub}
                 </p>
               </div>
               <span
@@ -776,7 +1008,7 @@ export default function KatanaDashboard() {
                     : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-800"
                 }`}
               >
-                {data.frontConnected ? "ONLINE" : "LEPAS"}
+                {data.frontConnected ? t.online : t.offline}
               </span>
             </div>
 
@@ -809,9 +1041,9 @@ export default function KatanaDashboard() {
                 />
               </div>
               <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
-                <span>0 cm (Dekat)</span>
+                <span>0 cm</span>
                 <span>60 cm</span>
-                <span>&gt;100 cm (Aman)</span>
+                <span>&gt;100 cm</span>
               </div>
             </div>
 
@@ -819,12 +1051,12 @@ export default function KatanaDashboard() {
               <span className="text-[11px] font-mono text-zinc-400">PIN D2/D3</span>
               <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
                 {!data.frontConnected
-                  ? "Sensor Lepas"
+                  ? t.offline
                   : data.frontCm! < 30
-                  ? "Bahaya Rintangan"
+                  ? t.frontHazard
                   : data.frontCm! < 60
-                  ? "Waspada Sedang"
-                  : "Jalur Bersih"}
+                  ? t.frontCaution
+                  : t.frontClear}
               </span>
             </div>
           </div>
@@ -835,10 +1067,10 @@ export default function KatanaDashboard() {
               <div>
                 <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <TrendingDown className="w-4 h-4 text-zinc-500" />
-                  2. Turunan / Lubang
+                  {t.downDrop}
                 </span>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Ultrasonik miring // HC-SR04
+                  {t.downSub}
                 </p>
               </div>
               <span
@@ -848,7 +1080,7 @@ export default function KatanaDashboard() {
                     : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-800"
                 }`}
               >
-                {data.downConnected ? "ONLINE" : "LEPAS"}
+                {data.downConnected ? t.online : t.offline}
               </span>
             </div>
 
@@ -860,7 +1092,7 @@ export default function KatanaDashboard() {
             </div>
 
             <div className="flex justify-between items-center px-3 py-1.5 bg-zinc-50 dark:bg-zinc-900/80 rounded-lg text-xs font-mono border border-zinc-200/50 dark:border-zinc-800/50">
-              <span className="text-zinc-500 text-[11px]">Selisih Baseline:</span>
+              <span className="text-zinc-500 text-[11px]">{t.baselineDelta}</span>
               <span
                 className={`font-bold ${
                   data.downConnected && data.downCm !== null && data.downCm - 30 > 15
@@ -876,10 +1108,10 @@ export default function KatanaDashboard() {
               <span className="text-[11px] font-mono text-zinc-400">PIN D10/D11</span>
               <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
                 {!data.downConnected
-                  ? "Sensor Lepas"
+                  ? t.offline
                   : data.downCm! - 30 > 15
-                  ? "Tepi Turunan Terbuka"
-                  : "Lantai Normal"}
+                  ? t.downHazard
+                  : t.downClear}
               </span>
             </div>
           </div>
@@ -890,10 +1122,10 @@ export default function KatanaDashboard() {
               <div>
                 <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <Compass className="w-4 h-4 text-zinc-500" />
-                  3. Kemiringan Tongkat
+                  {t.caneTilt}
                 </span>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Gyro / IMU 6-Axis // MPU6050
+                  {t.caneSub}
                 </p>
               </div>
               <span
@@ -903,7 +1135,7 @@ export default function KatanaDashboard() {
                     : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-800"
                 }`}
               >
-                {data.mpuConnected ? "ONLINE" : "LEPAS"}
+                {data.mpuConnected ? t.online : t.offline}
               </span>
             </div>
 
@@ -911,7 +1143,7 @@ export default function KatanaDashboard() {
               <span className="text-4xl font-black font-mono tracking-tight text-zinc-900 dark:text-white tabular-nums">
                 {data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg.toFixed(1) : "--"}
               </span>
-              <span className="text-xs font-bold text-zinc-400 font-mono">DERAJAT</span>
+              <span className="text-xs font-bold text-zinc-400 font-mono">{t.degrees}</span>
             </div>
 
             <div className="space-y-1.5">
@@ -934,9 +1166,9 @@ export default function KatanaDashboard() {
                 />
               </div>
               <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
-                <span>0° (Tegak)</span>
-                <span>Ambang 60°</span>
-                <span>90° (Rebah)</span>
+                <span>0°</span>
+                <span>60°</span>
+                <span>90°</span>
               </div>
             </div>
 
@@ -944,10 +1176,10 @@ export default function KatanaDashboard() {
               <span className="text-[11px] font-mono text-zinc-400">PIN A4/A5 I2C</span>
               <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
                 {!data.mpuConnected
-                  ? "Sensor Lepas"
+                  ? t.offline
                   : data.tiltDeg! > 60
-                  ? "Posisi Jatuh (SOS)"
-                  : "Tongkat Siap"}
+                  ? t.tiltHazard
+                  : t.tiltReady}
               </span>
             </div>
           </div>
@@ -958,14 +1190,14 @@ export default function KatanaDashboard() {
               <div>
                 <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <Droplets className="w-4 h-4 text-zinc-500" />
-                  4. Deteksi Air / Genangan
+                  {t.waterSensor}
                 </span>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Pelat kontak konduktif FR-4
+                  {t.waterSub}
                 </p>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                ONLINE
+                {t.online}
               </span>
             </div>
 
@@ -988,8 +1220,8 @@ export default function KatanaDashboard() {
                 />
               </div>
               <div className="flex justify-between text-[10px] text-zinc-400 font-mono">
-                <span>0 (Kering)</span>
-                <span>Ambang 650</span>
+                <span>0</span>
+                <span>650</span>
                 <span>1023</span>
               </div>
             </div>
@@ -997,7 +1229,7 @@ export default function KatanaDashboard() {
             <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-900 flex justify-between items-center text-xs">
               <span className="text-[11px] font-mono text-zinc-400">PIN A0 ANALOG</span>
               <span className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
-                {data.waterVal > 650 ? "Genangan Air Terdeteksi" : "Permukaan Kering"}
+                {data.waterVal > 650 ? t.waterHazard : t.waterClear}
               </span>
             </div>
           </div>
@@ -1012,14 +1244,14 @@ export default function KatanaDashboard() {
               <div>
                 <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                   <Activity className="w-4 h-4 text-zinc-500" />
-                  Visualisasi Gerakan Nyata Rangka Tongkat (2D CAD)
+                  {t.cadTitle}
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Rangka kruk siku berputar secara fisik mengikuti sudut orientasi MPU6050 terhadap garis lantai datar
+                  {t.cadDesc}
                 </p>
               </div>
               <span className="font-mono text-xs font-bold px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl self-start sm:self-auto">
-                SUDUT: {data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg.toFixed(1) : "0.0"}°
+                {t.cadAngle} {data.mpuConnected && data.tiltDeg !== null ? data.tiltDeg.toFixed(1) : "0.0"}°
               </span>
             </div>
 
@@ -1032,14 +1264,14 @@ export default function KatanaDashboard() {
 
               {/* Angle Tick Marks */}
               <span className="absolute bottom-9 left-10 text-[9px] font-mono text-zinc-400">80°</span>
-              <span className="absolute bottom-28 left-20 text-[9px] font-mono text-zinc-400">60° (JATUH)</span>
-              <span className="absolute top-10 text-[9px] font-mono text-zinc-400">0° (TEGAK)</span>
-              <span className="absolute bottom-28 right-20 text-[9px] font-mono text-zinc-400">30° (JALAN)</span>
+              <span className="absolute bottom-28 left-20 text-[9px] font-mono text-zinc-400">60°</span>
+              <span className="absolute top-10 text-[9px] font-mono text-zinc-400">0°</span>
+              <span className="absolute bottom-28 right-20 text-[9px] font-mono text-zinc-400">30°</span>
 
               {/* Floor Horizon Line */}
               <div className="absolute bottom-8 left-0 right-0 h-0.5 bg-zinc-300 dark:bg-zinc-700 flex justify-between px-4">
-                <span className="text-[10px] text-zinc-400 font-mono -mt-4">LANTAI RUJUKAN (0 CM)</span>
-                <span className="text-[10px] text-zinc-400 font-mono -mt-4">HORIZON PLANAR</span>
+                <span className="text-[10px] text-zinc-400 font-mono -mt-4">{t.floorRef}</span>
+                <span className="text-[10px] text-zinc-400 font-mono -mt-4">{t.horizonPlanar}</span>
               </div>
 
               {/* Virtual Cane Vector */}
@@ -1065,7 +1297,7 @@ export default function KatanaDashboard() {
               {data.mpuConnected && data.tiltDeg !== null && data.tiltDeg > 60 && (
                 <div className="absolute top-4 px-4 py-2 bg-rose-600 text-white font-extrabold text-xs rounded-xl shadow-lg border border-rose-500 animate-bounce tracking-wide flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
-                  [PERINGATAN] TONGKAT TERJATUH // ALARM SOS AKTIF
+                  {t.fallWarning}
                 </div>
               )}
             </div>
@@ -1076,10 +1308,10 @@ export default function KatanaDashboard() {
             <div>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-zinc-500" />
-                Integritas Sambungan Kabel Fisik
+                {t.wiringTitle}
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Pemeriksaan status sambungan pin ke modul hardware secara real-time
+                {t.wiringDesc}
               </p>
             </div>
 
@@ -1096,7 +1328,7 @@ export default function KatanaDashboard() {
                       : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
                   }`}
                 >
-                  {data.frontConnected ? "TERHUBUNG" : "LEPAS"}
+                  {data.frontConnected ? t.connectedStatus : t.disconnectedStatus}
                 </span>
               </div>
 
@@ -1112,7 +1344,7 @@ export default function KatanaDashboard() {
                       : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
                   }`}
                 >
-                  {data.downConnected ? "TERHUBUNG" : "LEPAS"}
+                  {data.downConnected ? t.connectedStatus : t.disconnectedStatus}
                 </span>
               </div>
 
@@ -1128,7 +1360,7 @@ export default function KatanaDashboard() {
                       : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
                   }`}
                 >
-                  {data.mpuConnected ? "TERHUBUNG" : "LEPAS"}
+                  {data.mpuConnected ? t.connectedStatus : t.disconnectedStatus}
                 </span>
               </div>
 
@@ -1138,7 +1370,7 @@ export default function KatanaDashboard() {
                   <div className="text-[11px] font-mono text-zinc-500">Pin A0 (Analog)</div>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                  TERHUBUNG
+                  {t.connectedStatus}
                 </span>
               </div>
 
@@ -1148,7 +1380,7 @@ export default function KatanaDashboard() {
                   <div className="text-[11px] font-mono text-zinc-500">Pin D5 (Modul Driver)</div>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                  SIAP
+                  {t.readyStatus}
                 </span>
               </div>
 
@@ -1158,7 +1390,7 @@ export default function KatanaDashboard() {
                   <div className="text-[11px] font-mono text-zinc-500">Pin D6 (Transistor BC547)</div>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                  SIAP
+                  {t.readyStatus}
                 </span>
               </div>
             </div>
@@ -1171,7 +1403,7 @@ export default function KatanaDashboard() {
             <div className="flex items-center gap-2">
               <Terminal className="w-4 h-4 text-zinc-500" />
               <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
-                TERMINAL TELEMETRI SERIAL (115200 BAUD)
+                {t.terminalTitle}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -1182,21 +1414,21 @@ export default function KatanaDashboard() {
                   onChange={(e) => setAutoscroll(e.target.checked)}
                   className="rounded text-zinc-900"
                 />
-                <span>Autoscroll</span>
+                <span>{t.autoscroll}</span>
               </label>
               <button
                 onClick={handleCopyLogs}
                 className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium"
               >
                 {copiedLog ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedLog ? "Tersalin" : "Salin Log"}</span>
+                <span>{copiedLog ? t.copied : t.copyLogs}</span>
               </button>
               <button
                 onClick={() => setLogs([])}
                 className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Bersihkan</span>
+                <span>{t.clear}</span>
               </button>
             </div>
           </div>
@@ -1230,7 +1462,7 @@ export default function KatanaDashboard() {
                 type="text"
                 value={customCommand}
                 onChange={(e) => setCustomCommand(e.target.value)}
-                placeholder="Ketik perintah serial (contoh: HELP, FALL, DROP, FRONT 15, TILT 75, DEMO OFF)..."
+                placeholder={t.inputPlaceholder}
                 className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-8 pr-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
               />
             </div>
@@ -1240,13 +1472,13 @@ export default function KatanaDashboard() {
               className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>Kirim</span>
+              <span>{t.send}</span>
             </button>
           </form>
 
           {/* Quick Command Pills */}
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-zinc-500 pt-1">
-            <span className="text-[10px] text-zinc-400 font-semibold">Pintasan:</span>
+            <span className="text-[10px] text-zinc-400 font-semibold">{t.shortcuts}</span>
             <button
               type="button"
               onClick={() => sendSerial("HELP")}
@@ -1259,42 +1491,42 @@ export default function KatanaDashboard() {
               onClick={() => triggerPreset("FALL")}
               className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 cursor-pointer font-medium"
             >
-              JATUH (SOS)
+              {t.fallPreset}
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("DROP")}
               className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 cursor-pointer font-medium"
             >
-              TURUNAN
+              {t.dropPreset}
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("WET")}
               className="px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/40 text-sky-600 dark:text-sky-300 border border-sky-200 dark:border-sky-900 cursor-pointer font-medium"
             >
-              AIR BASAH
+              {t.wetPreset}
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("NEAR")}
               className="px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-900 cursor-pointer font-medium"
             >
-              OBJEK DEKAT
+              {t.nearPreset}
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("NORMAL")}
               className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 cursor-pointer font-medium"
             >
-              NORMAL
+              {t.normalPreset}
             </button>
             <button
               type="button"
               onClick={() => toggleDemoMode(false)}
               className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 text-zinc-500 border border-zinc-200 dark:border-zinc-800 cursor-pointer ml-auto font-medium"
             >
-              TUTUP DEMO
+              {t.closeDemo}
             </button>
           </div>
         </section>
@@ -1311,17 +1543,17 @@ export default function KatanaDashboard() {
               </div>
               <div>
                 <span className="font-bold text-xs text-zinc-900 dark:text-white block">
-                  Simulasi Sensor (Wokwi Style)
+                  {t.simTitle}
                 </span>
                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                  {isConnected ? "[ONLINE] Terhubung ke Arduino USB" : "[OFFLINE] Mode UI Interaktif"}
+                  {isConnected ? t.simOnline : t.simOffline}
                 </span>
               </div>
             </div>
             <button
               onClick={() => toggleDemoMode(false)}
               className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer p-1 rounded-lg"
-              title="Tutup Mode Demo"
+              title={t.closeDemo}
             >
               <X className="w-4 h-4" />
             </button>
@@ -1330,7 +1562,7 @@ export default function KatanaDashboard() {
           {/* Quick Scenario Buttons */}
           <div className="space-y-2">
             <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-400 uppercase block">
-              Skenario Cepat Instan:
+              {t.instantScenarios}
             </span>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
@@ -1338,28 +1570,28 @@ export default function KatanaDashboard() {
                 onClick={() => triggerPreset("FALL")}
                 className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
               >
-                Tongkat Jatuh (SOS)
+                {t.caneFallSOS}
               </button>
               <button
                 type="button"
                 onClick={() => triggerPreset("DROP")}
                 className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
               >
-                Tepi Jurang (+25cm)
+                {t.cliffEdge}
               </button>
               <button
                 type="button"
                 onClick={() => triggerPreset("WET")}
                 className="px-3 py-2 rounded-xl bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/50 border border-sky-200 dark:border-sky-900 text-sky-700 dark:text-sky-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
               >
-                Genangan Air (&gt;650)
+                {t.puddleWater}
               </button>
               <button
                 type="button"
                 onClick={() => triggerPreset("NEAR")}
                 className="px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 font-semibold text-left cursor-pointer transition-colors shadow-2xs"
               >
-                Objek Dekat (14cm)
+                {t.nearObstacle}
               </button>
             </div>
             <button
@@ -1367,19 +1599,19 @@ export default function KatanaDashboard() {
               onClick={() => triggerPreset("NORMAL")}
               className="w-full px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold text-center text-xs cursor-pointer transition-colors shadow-2xs"
             >
-              Reset ke Kondisi Normal Aman
+              {t.resetNormal}
             </button>
           </div>
 
           {/* Precision Sliders */}
           <div className="space-y-3.5 pt-3 border-t border-zinc-200 dark:border-zinc-800 text-xs">
             <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-400 uppercase block">
-              Pengaturan Parameter Presisi:
+              {t.precisionSliders}
             </span>
 
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Jarak Depan (HC-SR04):</span>
+                <span className="text-zinc-500">{t.frontDistLabel}</span>
                 <span className="font-bold text-zinc-900 dark:text-zinc-100">{demoFront} cm</span>
               </div>
               <input
@@ -1394,7 +1626,7 @@ export default function KatanaDashboard() {
 
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Turunan Bawah (+Delta):</span>
+                <span className="text-zinc-500">{t.downDeltaLabel}</span>
                 <span className="font-bold text-zinc-900 dark:text-zinc-100">+{demoDown} cm</span>
               </div>
               <input
@@ -1409,7 +1641,7 @@ export default function KatanaDashboard() {
 
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Kemiringan MPU6050:</span>
+                <span className="text-zinc-500">{t.tiltLabel}</span>
                 <span className="font-bold text-zinc-900 dark:text-zinc-100">{demoTilt}°</span>
               </div>
               <input
@@ -1424,8 +1656,10 @@ export default function KatanaDashboard() {
 
             <div className="space-y-1">
               <div className="flex justify-between font-mono">
-                <span className="text-zinc-500">Sensor Air (A0):</span>
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">{demoWater > 650 ? `${demoWater} (Basah)` : `${demoWater} (Kering)`}</span>
+                <span className="text-zinc-500">{t.waterLabel}</span>
+                <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                  {demoWater > 650 ? `${demoWater} ${t.wetState}` : `${demoWater} ${t.dryState}`}
+                </span>
               </div>
               <input
                 type="range"
