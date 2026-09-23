@@ -105,17 +105,51 @@ export default function KatanaDashboard() {
     }
   }, [logs, autoscroll]);
 
-  // Send serial command helper
+  // Send serial command helper (langsung menulis Uint8Array ke port.writable)
   const sendSerial = async (command: string) => {
     if (writerRef.current) {
       try {
-        await writerRef.current.write(command + "\n");
+        const encoder = new TextEncoder();
+        await writerRef.current.write(encoder.encode(command + "\n"));
         addLog(`[KIRIM] >> ${command}`);
       } catch (err: any) {
         console.error("Gagal mengirim perintah serial:", err);
+        addLog(`[ERROR] Gagal kirim perintah: ${err.message}`);
       }
     }
   };
+
+  // Monitor physical USB plug/unplug events
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serial" in navigator)) return;
+
+    const onDisconnect = () => {
+      addLog("[PERINGATAN] Kabel USB Arduino dicabut dari komputer.");
+      setIsConnected(false);
+      setPortInfo("USB Terputus (Kabel Dicabut)");
+      if (writerRef.current) {
+        try { writerRef.current.releaseLock(); } catch (e) {}
+        writerRef.current = null;
+      }
+      if (readerRef.current) {
+        try { readerRef.current.releaseLock(); } catch (e) {}
+        readerRef.current = null;
+      }
+      portRef.current = null;
+    };
+
+    const onConnect = () => {
+      addLog("[INFO] Perangkat USB Arduino terdeteksi kembali. Klik 'Hubungkan Arduino' untuk menyambungkan.");
+    };
+
+    (navigator as any).serial.addEventListener("disconnect", onDisconnect);
+    (navigator as any).serial.addEventListener("connect", onConnect);
+
+    return () => {
+      (navigator as any).serial.removeEventListener("disconnect", onDisconnect);
+      (navigator as any).serial.removeEventListener("connect", onConnect);
+    };
+  }, []);
 
   // Serial connection handlers
   const handleConnect = async () => {
@@ -130,24 +164,35 @@ export default function KatanaDashboard() {
       portRef.current = port;
       setIsConnected(true);
       setPortInfo("Terhubung (115200 Baud)");
-      addLog("[SISTEM] Port serial berhasil tersambung pada 115200 baud.");
+      addLog("[SISTEM] Port serial USB berhasil tersambung pada 115200 baud.");
 
-      // Setup stream reader
-      const textDecoder = new (window as any).TextDecoderStream();
-      port.readable.pipeTo(textDecoder.writable);
-      const reader = textDecoder.readable.getReader();
-      readerRef.current = reader;
-
-      // Setup stream writer untuk mengirim perintah balik ke Arduino
-      const textEncoder = new (window as any).TextEncoderStream();
-      textEncoder.readable.pipeTo(port.writable);
-      const writer = textEncoder.writable.getWriter();
+      // Setup raw direct writer (bebas stream lock issue saat disconnect)
+      const writer = port.writable.getWriter();
       writerRef.current = writer;
+
+      // Setup raw direct reader
+      const reader = port.readable.getReader();
+      readerRef.current = reader;
 
       readLoop(reader);
     } catch (err: any) {
       console.error(err);
-      addLog(`[INFO] Koneksi dibatalkan: ${err.message}`);
+      if (err.name === "NotFoundError") {
+        addLog("[INFO] Pemilihan port dibatalkan pengguna.");
+      } else if (
+        err.message &&
+        (err.message.includes("busy") ||
+          err.message.includes("denied") ||
+          err.message.includes("Failed to open") ||
+          err.message.includes("already open"))
+      ) {
+        alert(
+          "Port USB sedang sibuk atau dipakai aplikasi lain!\n\nPastikan Serial Monitor di Arduino IDE sudah DITUTUP sebelum mengklik 'Hubungkan Arduino' di website."
+        );
+        addLog("[ERROR] Port serial sedang dipakai aplikasi lain (tutup Serial Monitor di Arduino IDE).");
+      } else {
+        addLog(`[INFO] Sambungan tidak dapat dibuka: ${err.message}`);
+      }
       setIsConnected(false);
     }
   };
@@ -157,15 +202,29 @@ export default function KatanaDashboard() {
       if (writerRef.current) {
         try {
           await writerRef.current.close();
-        } catch (e) {}
+        } catch (e) {
+          try {
+            writerRef.current.releaseLock();
+          } catch (e2) {}
+        }
         writerRef.current = null;
       }
       if (readerRef.current) {
-        await readerRef.current.cancel();
+        try {
+          await readerRef.current.cancel();
+        } catch (e) {
+          try {
+            readerRef.current.releaseLock();
+          } catch (e2) {}
+        }
         readerRef.current = null;
       }
       if (portRef.current) {
-        await portRef.current.close();
+        try {
+          await portRef.current.close();
+        } catch (e) {
+          console.error("Error closing port:", e);
+        }
         portRef.current = null;
       }
       setIsConnected(false);
@@ -182,13 +241,14 @@ export default function KatanaDashboard() {
 
   let buffer = "";
   const readLoop = async (reader: any) => {
+    const decoder = new TextDecoder();
     try {
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         if (value) {
-          buffer += value;
-          const lines = buffer.split("\n");
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split(/\r?\n/);
           buffer = lines.pop() || "";
           for (const rawLine of lines) {
             const line = rawLine.trim();
@@ -200,8 +260,11 @@ export default function KatanaDashboard() {
         }
       }
     } catch (err: any) {
-      console.error("Read loop error:", err);
-      setIsConnected(false);
+      console.error("Read loop selesai:", err);
+    } finally {
+      try {
+        reader.releaseLock();
+      } catch (e) {}
     }
   };
 
