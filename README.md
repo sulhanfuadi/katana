@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/katana-logo.png" alt="KATANA Logo" width="160" />
+  <img src="assets/katana_logo.png" alt="KATANA Logo" width="160" />
 </p>
 
 # KATANA (Kawan Tunanetra / Smart Cane Assistant)
@@ -39,7 +39,12 @@ MPU6050 (6-Axis IMU)       ---(I2C)----->                     ---(D6+BC547)-> 85
 ```text
 katana/
 |-- assets/
-|   `-- katana-logo.png   # Official project emblem and logo
+|   |-- katana_logo.png           # Official project emblem and logo
+|   |-- blueprint.png             # Mechanical blueprint and 2D CAD dimensions
+|   |-- konsep_diagram.png        # System architecture concept diagram
+|   |-- wiring_diagram_riil.png   # Physical electronic schematic & pin mapping
+|   |-- flowchart_riil.png        # Production hardware embedded firmware flowchart
+|   `-- flowchart_simulasi.png    # Virtual Wokwi simulation runtime flowchart
 |-- katana.ino            # Production firmware for physical Arduino Nano hardware
 |-- REAL_WIRING.md        # Physical pinout guide, transistor driver schematic, and assembly checklist
 |-- README.md             # Core project documentation and operation manual (English)
