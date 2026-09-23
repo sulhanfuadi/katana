@@ -69,7 +69,22 @@ Jika beberapa kondisi bahaya terjadi secara bersamaan, sistem menerapkan **prior
 4. Telemetri visual real-time (sudut kruk 2D CAD, indikator jarak, deteksi kabel lepas, switch demo) langsung aktif!
 *(Tips: Tutup tab Serial Monitor di Arduino IDE sebelum menghubungkan agar port serial tidak bentrok).*
 
-### 3. Menjalankan Simulasi Wokwi
+### 3. Mode Simulasi & Perintah Serial Interaktif (Seperti di Wokwi)
+Firmware KATANA kini mendukung mode pengujian override sensor langsung melalui serial. Anda dapat menguji seluruh skenario bahaya tanpa harus menggerakkan hardware fisik:
+
+- **Melalui Dashboard Next.js:**  
+  Klik toggle **Mode Demo: AKTIF** dan gunakan tombol skenario instan (`🚨 JATUH (SOS)`, `⚠️ TURUNAN`, `💧 AIR`, `🛑 DEKAT`, `✅ NORMAL`) atau geser slider presisi. Jika Arduino terhubung ke USB, perintah override otomatis terkirim dan membunyikan buzzer / menggetarkan motor fisik secara nyata!
+- **Melalui Serial Monitor Arduino IDE:**  
+  Buka Serial Monitor pada 115200 baud dan kirim perintah berikut:
+  - `HELP` : Menampilkan panduan perintah lengkap.
+  - `DEMO ON` / `DEMO OFF` : Mengaktifkan/menonaktifkan mode simulasi.
+  - `FALL` : Mensimulasikan tongkat jatuh (kemiringan 75°, membunyikan alarm Morse SOS).
+  - `DROP` : Mensimulasikan tepi turunan / lubang (delta +25 cm, 3 pulsa getar).
+  - `WET` : Mensimulasikan genangan air (nilai sensor 850, 2 pulsa getar panjang).
+  - `NEAR` : Mensimulasikan rintangan sangat dekat (jarak 15 cm).
+  - `FRONT <cm>` / `DOWN <cm>` / `TILT <deg>` / `WATER <val>` : Mengatur nilai sensor manual.
+
+### 4. Menjalankan Simulasi Wokwi
 - **Opsi A (Browser):** Buka langsung tautan [https://wokwi.com/projects/474342215789115393](https://wokwi.com/projects/474342215789115393).
 - **Opsi B (Lokal via VS Code):** Buka folder `wokwi/` menggunakan ekstensi Wokwi for VS Code.
 
@@ -77,3 +92,4 @@ Jika beberapa kondisi bahaya terjadi secara bersamaan, sistem menerapkan **prior
 
 ## Referensi Terkait
 - [Panduan Pengkabelan Lengkap (REAL_WIRING.md)](REAL_WIRING.md)
+- [Petunjuk Dashboard Web (dashboard/README.md)](dashboard/README.md)

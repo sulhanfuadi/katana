@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KATANA Telemetry Dashboard (Next.js 15)
 
-## Getting Started
+Dashboard telemetri live berbasis web untuk tongkat pintar tunanetra KATANA dengan integrasi Web Serial API, visualisasi CAD 2D kemiringan tongkat, serta **Mode Simulasi Interaktif dua arah (seperti di Wokwi)**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Fitur Utama
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Web Serial Telemetry (115200 Baud)**: Membaca dan mengirim data langsung ke Arduino Nano fisik melalui port USB browser (Chrome / Brave / Edge).
+2. **Mode Simulasi / Demo Interaktif Dua Arah**:
+   - Jika USB Arduino terhubung, slider dan tombol skenario di dashboard akan **mengirim perintah override ke Arduino** sehingga aktuator fisik (buzzer SOS di pin D6 & motor getar di pin D5) benar-benar berbunyi/bergetar di dunia nyata!
+   - Stream log serial di Serial Monitor Arduino dan Dashboard terminal langsung menampilkan output `[SIMULASI] ...` secara real-time.
+   - Jika USB tidak dicolok, dashboard tetap dapat disimulasikan secara offline di UI.
+3. **Pintasan Skenario Cepat (Wokwi Style)**:
+   - 🚨 `JATUH (SOS)`: Mengatur kemiringan tongkat ke 75° dan memicu alarm Morse SOS.
+   - ⚠️ `TURUNAN`: Mengatur delta sensor bawah ke +25 cm dan memicu 3 pulsa getar.
+   - 💧 `AIR BASAH`: Mengatur sensor air ke 850 dan memicu 2 getaran panjang.
+   - 🛑 `OBJEK DEKAT`: Mengatur sensor depan ke 12 cm dan memicu getaran rapat bahaya.
+   - ✅ `NORMAL`: Mengembalikan seluruh sensor ke kondisi aman jalan.
+4. **Terminal Serial Monitor Interaktif**: Dilengkapi input bar dan tombol pintasan perintah serial (`HELP`, `FRONT <cm>`, `TILT <deg>`, `DEMO ON`, `DEMO OFF`).
+5. **Visual CAD Rangka Tongkat 2D**: Bergerak secara fisik mengikuti derajat kemiringan MPU6050 terhadap garis lantai datar.
+6. **Multi-Theme**: Mendukung Gelap (Dark), Terang (Paper Light), dan Otomatis (Sistem).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Cara Menjalankan
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Masuk ke direktori dashboard dan jalankan server pengembangan:
+   ```bash
+   cd dashboard
+   npm run dev
+   ```
+2. Buka browser di [http://localhost:3000](http://localhost:3000).
+3. Klik **Hubungkan Arduino** untuk menghubungkan port USB (misal `/dev/cu.usbserial-110`), atau klik **Mode Demo** untuk mencoba simulasi langsung.
