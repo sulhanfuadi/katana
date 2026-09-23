@@ -15,10 +15,10 @@ katana/
 ├── REAL_WIRING.md        # Panduan pinout fisik, skema transistor BC547 & checklist
 ├── README.md             # Dokumentasi proyek & panduan penggunaan
 ├── .gitignore            # Filter file build dan temporary
-├── dashboard/            # Web Serial Live Telemetry Dashboard (Buka di Chrome/Brave)
-│   ├── index.html        # UI dashboard interaktif (Visual radar, kemiringan 2D, pin status)
-│   ├── style.css         # Styling dark mode & glassmorphism
-│   └── app.js            # Web Serial API handler & parser
+├── dashboard/            # Web Serial Live Telemetry Dashboard (Next.js 15 + Tailwind)
+│   ├── src/app/page.tsx  # Interactive UI (Visual kemiringan 2D, radar, status pin, logs)
+│   ├── package.json      # Dependencies (lucide-react, next, react, tailwindcss)
+│   └── README.md         # Petunjuk menjalankan dashboard Next.js
 └── wokwi/                # Paket simulasi virtual Wokwi
     ├── sketch.ino        # Kode simulasi dengan preset WOKWI_SIMULATION = 1
     ├── diagram.json      # Skema wiring virtual komponen Wokwi
@@ -50,23 +50,24 @@ Jika beberapa kondisi bahaya terjadi secara bersamaan, sistem menerapkan **prior
    ```cpp
    #define WOKWI_SIMULATION 0
    ```
-3. Pilih board **Arduino Nano** dan port serial Anda (contoh: `/dev/cu.usbserial-10`).
+3. Pilih board **Arduino Nano** dan port serial Anda (contoh: `/dev/cu.usbserial-110`).
 4. Jika menggunakan chip clone CH340, pilih **Tools > Processor > ATmega328P (Old Bootloader)**.
 5. Tekan tombol **Upload**.
-6. Buka **Serial Monitor** pada kecepatan **115200 baud**.
+6. Buka **Serial Monitor** pada kecepatan **115200 baud** untuk melihat stream data.
 
 > **Tips Kalibrasi Sensor Bawah:**  
 > Saat pertama kali dinyalakan (`setup`), sistem membaca rata-rata 12 sampel jarak lantai sebagai nilai `baseline` (~30 cm). Pastikan tongkat dipegang pada posisi sudut jalan normal selama 1-2 detik pertama setelah dinyalakan.
 
-### 2. Membuka Web Serial Live Dashboard
-1. Buka browser **Google Chrome** atau **Brave**.
-2. Buka file `dashboard/index.html` langsung di browser:
+### 2. Menjalankan Dashboard Telemetri (Next.js)
+1. Masuk ke folder dashboard dan jalankan server lokal:
    ```bash
-   open dashboard/index.html
+   cd dashboard
+   npm run dev
    ```
-3. Klik tombol **Hubungkan Arduino**, lalu pilih port USB Anda (contoh: `/dev/cu.usbserial-110`).
-4. Telemetri visual real-time (radar, sudut kemiringan kruk 2D, status pin) akan langsung aktif!
-*(Tips: Tutup tab Serial Monitor di Arduino IDE sebelum menghubungkan agar port serial tidak rebutan).*
+2. Buka browser **Google Chrome**, **Brave**, atau **Edge** di [http://localhost:3000](http://localhost:3000).
+3. Klik tombol **Hubungkan Arduino**, lalu pilih port USB Arduino Nano Anda (contoh: `/dev/cu.usbserial-110`).
+4. Telemetri visual real-time (sudut kruk 2D CAD, indikator jarak, deteksi kabel lepas, switch demo) langsung aktif!
+*(Tips: Tutup tab Serial Monitor di Arduino IDE sebelum menghubungkan agar port serial tidak bentrok).*
 
 ### 3. Menjalankan Simulasi Wokwi
 - **Opsi A (Browser):** Buka langsung tautan [https://wokwi.com/projects/474342215789115393](https://wokwi.com/projects/474342215789115393).
