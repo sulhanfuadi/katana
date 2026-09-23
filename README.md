@@ -1,95 +1,166 @@
-# KATANA (Kawan Tunanetra)
+# KATANA (Kawan Tunanetra / Smart Cane Assistant)
 
-> **Tongkat Pintar untuk Navigasi Lebih Gacor**  
-> Prototype tongkat navigasi berbasis retrofit kruk siku bekas dengan integrasi multi-sensor: deteksi objek depan, deteksi turunan/lubang, sensor air/genangan, haptic vibration feedback, dan buzzer darurat SOS saat terjatuh.
+> **Intelligent Navigation & Safety Cane for the Visually Impaired**  
+> A retrofit smart cane prototype built on a salvaged elbow crutch, integrating multi-sensor environmental perception: frontal obstacle detection, ground drop-off and pothole detection, puddle/water hazard sensing, tactile haptic feedback, and an emergency SOS buzzer triggered upon falls.
 
-Simulasi daring: [Wokwi KATANA Simulation](https://wokwi.com/projects/474342215789115393)
+Online Virtual Simulation: [Wokwi KATANA Simulation](https://wokwi.com/projects/474342215789115393)
 
 ---
 
-## Struktur Repositori
+## System Overview & Architecture
+
+KATANA retrofits an ergonomic forearm crutch into an assistive navigation device designed for outdoor and indoor mobility. It processes sensor streams in real time on an onboard microcontroller, evaluates hazard states via a deterministic priority engine, and provides distinct haptic vibration and acoustic alerts to the user.
 
 ```text
-katana/
-├── katana.ino            # Firmware utama untuk hardware Arduino Nano fisik
-├── REAL_WIRING.md        # Panduan pinout fisik, skema transistor BC547 & checklist
-├── README.md             # Dokumentasi proyek & panduan penggunaan
-├── .gitignore            # Filter file build dan temporary
-├── dashboard/            # Web Serial Live Telemetry Dashboard (Next.js 15 + Tailwind)
-│   ├── src/app/page.tsx  # Interactive UI (Visual kemiringan 2D, radar, status pin, logs)
-│   ├── package.json      # Dependencies (lucide-react, next, react, tailwindcss)
-│   └── README.md         # Petunjuk menjalankan dashboard Next.js
-└── wokwi/                # Paket simulasi virtual Wokwi
-    ├── sketch.ino        # Kode simulasi dengan preset WOKWI_SIMULATION = 1
-    ├── diagram.json      # Skema wiring virtual komponen Wokwi
-    ├── wokwi.toml        # Konfigurasi emulator Wokwi
-    └── wokwi-project.txt # Metadata sumber proyek Wokwi
+[ ENVIRONMENTAL INPUTS ]               [ PROCESSING UNIT ]              [ FEEDBACK ACTUATORS ]
+
+HC-SR04 (Front Obstacle)   ---(D2/D3)--->                     ---(PWM D5)---> Eccentric Haptic Motor
+HC-SR04 (Ground Drop-off)  ---(D10/D11)-> Arduino Nano V3                    (Handle Vibration)
+Water Sensor (Conductive)  ---(A0)------> (ATmega328P / 16MHz)
+MPU6050 (6-Axis IMU)       ---(I2C)----->                     ---(D6+BC547)-> 85dB Active Buzzer
+                                                                              (Acoustic SOS Alarm)
+                                                  |
+                                                  v
+                                          USB Serial (115200)
+                                                  |
+                                                  v
+                                       [ TELEMETRY DASHBOARD ]
+                                       Next.js + Web Serial API
 ```
 
 ---
 
-## Logika Peringatan & Urutan Prioritas
+## Repository Structure
 
-Jika beberapa kondisi bahaya terjadi secara bersamaan, sistem menerapkan **prioritas tunggal** tertinggi agar tidak membingungkan pengguna:
-
-| Prioritas | Skenario | Sensor Terlibat | Indikator Respons | Umpan Balik |
-|:---:|---|---|---|---|
-| **1 (Tertinggi)** | **Tongkat Jatuh / Tergeletak** | MPU6050 (Kemiringan > 60° selama > 2 detik) | `TONGKAT_JATUH` | Motor mati, Buzzer pola Morse SOS (`... --- ...`) |
-| **2** | **Tepi Turunan / Lubang / Tangga** | HC-SR04 Bawah (Kenaikan jarak > 15 cm dari baseline) | `TEPI_TURUNAN` | 3 getaran pulsa kuat pada gagang |
-| **3** | **Genangan Air / Area Basah** | Pelat Sensor Air (Analog A0 > 650) | `PERMUKAAN_BASAH` | 2 getaran panjang pada gagang |
-| **4** | **Objek Rintangan di Depan** | HC-SR04 Depan (Jarak < 100 cm) | `OBJEK_WASPADA` / `SEDANG` / `DEKAT` | Pulsa getar berjenjang (makin dekat objek, getaran makin rapat) |
-| **-** | **Kondisi Normal** | Semua sensor dalam batas aman | `NORMAL` | Motor diam, buzzer diam |
+```text
+katana/
+|-- katana.ino            # Production firmware for physical Arduino Nano hardware
+|-- REAL_WIRING.md        # Physical pinout guide, transistor driver schematic, and assembly checklist
+|-- README.md             # Core project documentation and operation manual (English)
+|-- AGENTS.md             # Developer guidelines, code standards, and style rules
+|-- .gitignore            # Build artifact exclusions
+|-- dashboard/            # Web Serial Live Telemetry Dashboard (Next.js 15, Tailwind CSS, Lucide)
+|   |-- src/app/page.tsx  # Interactive UI (2D CAD cane orientation, radar chart, terminal, demo controls)
+|   |-- package.json      # Frontend dependencies and runtime scripts
+|   |-- README.md         # Dashboard architecture and setup guide
+|   |-- AGENTS.md         # Dashboard-specific rules
+|   `-- CLAUDE.md         # Assistant workspace link
+`-- wokwi/                # Wokwi simulation bundle
+    |-- sketch.ino        # Simulation sketch configured for virtual runtime
+    |-- diagram.json      # Virtual breadboard and wiring definition
+    |-- wokwi.toml        # Emulator configuration
+    `-- wokwi-project.txt # Wokwi project reference metadata
+```
 
 ---
 
-## Panduan Penggunaan
+## Hazard Evaluation & Alert Priority Logic
 
-### 1. Upload ke Hardware Fisik (Arduino Nano)
-1. Buka file [katana.ino](katana.ino) di Arduino IDE.
-2. Pastikan baris konfigurasi berikut bernilai `0` (sudah default):
+When multiple hazard conditions are detected simultaneously, the internal state machine selects a single active state based on a strict priority ladder. This eliminates cognitive overload and sensory confusion for the user:
+
+| Priority | Hazard Scenario | Sensor Trigger | Active State Name | Feedback Actuator Response |
+|:---:|---|---|---|---|
+| **1 (Highest)** | **Cane Dropped / Fallen User** | MPU6050: Tilt angle > 60 deg sustained for > 2.0s | `TONGKAT_JATUH` | Vibration motor stops; Buzzer sounds continuous Morse SOS pattern (`... --- ...`) |
+| **2** | **Drop-off / Pothole / Downward Stairs** | HC-SR04 Down: Ground distance increases by > 15 cm above calibrated baseline | `TEPI_TURUNAN` | 3 distinct high-intensity haptic pulses at the handle |
+| **3** | **Water Puddle / Flooded Surface** | Conductive Water Sensor Plate: Analog signal (A0) > 650 | `PERMUKAAN_BASAH` | 2 sustained long vibration pulses |
+| **4** | **Frontal Obstacle (Critical)** | HC-SR04 Front: Distance < 30 cm | `OBJEK_DEKAT` | Continuous high-frequency vibration (PWM 240) |
+| **5** | **Frontal Obstacle (Medium)** | HC-SR04 Front: Distance between 30 cm and 60 cm | `OBJEK_SEDANG` | Rapid pulsing vibration (120ms cadence) |
+| **6** | **Frontal Obstacle (Warning)** | HC-SR04 Front: Distance between 60 cm and 100 cm | `OBJEK_WASPADA` | Slow pulsing vibration (350ms cadence) |
+| **-** | **Sensor Disconnected / Cable Fault** | Front or downward ultrasonic pulse returns 0 or timeout | `STANDBY` | Motor idle, buzzer idle, telemetry reports `LEPAS` |
+| **-** | **Normal Walking Path** | All sensors within safe clearance thresholds | `NORMAL` | Motor idle, buzzer idle |
+
+---
+
+## Operating Instructions
+
+### 1. Flashing Physical Hardware (Arduino Nano V3)
+
+1. Open [katana.ino](katana.ino) in the Arduino IDE.
+2. Verify the configuration flag is set for physical deployment:
    ```cpp
    #define WOKWI_SIMULATION 0
    ```
-3. Pilih board **Arduino Nano** dan port serial Anda (contoh: `/dev/cu.usbserial-110`).
-4. Jika menggunakan chip clone CH340, pilih **Tools > Processor > ATmega328P (Old Bootloader)**.
-5. Tekan tombol **Upload**.
-6. Buka **Serial Monitor** pada kecepatan **115200 baud** untuk melihat stream data.
+3. Connect your Arduino Nano via USB.
+4. Select board **Arduino Nano** and choose your serial port (e.g., `/dev/cu.usbserial-110` on macOS or `COM3` on Windows).
+5. For CH340 USB clones, select **Tools > Processor > ATmega328P (Old Bootloader)**.
+6. Click **Upload**.
+7. Open **Serial Monitor** at **115200 baud** to view real-time diagnostics.
 
-> **Tips Kalibrasi Sensor Bawah:**  
-> Saat pertama kali dinyalakan (`setup`), sistem membaca rata-rata 12 sampel jarak lantai sebagai nilai `baseline` (~30 cm). Pastikan tongkat dipegang pada posisi sudut jalan normal selama 1-2 detik pertama setelah dinyalakan.
-
-### 2. Menjalankan Dashboard Telemetri (Next.js)
-1. Masuk ke folder dashboard dan jalankan server lokal:
-   ```bash
-   cd dashboard
-   npm run dev
-   ```
-2. Buka browser **Google Chrome**, **Brave**, atau **Edge** di [http://localhost:3000](http://localhost:3000).
-3. Klik tombol **Hubungkan Arduino**, lalu pilih port USB Arduino Nano Anda (contoh: `/dev/cu.usbserial-110`).
-4. Telemetri visual real-time (sudut kruk 2D CAD, indikator jarak, deteksi kabel lepas, switch demo) langsung aktif!
-*(Tips: Tutup tab Serial Monitor di Arduino IDE sebelum menghubungkan agar port serial tidak bentrok).*
-
-### 3. Mode Simulasi & Perintah Serial Interaktif (Seperti di Wokwi)
-Firmware KATANA kini mendukung mode pengujian override sensor langsung melalui serial. Anda dapat menguji seluruh skenario bahaya tanpa harus menggerakkan hardware fisik:
-
-- **Melalui Dashboard Next.js:**  
-  Klik toggle **Mode Demo: AKTIF** dan gunakan tombol skenario instan (`JATUH (SOS)`, `TURUNAN`, `AIR`, `DEKAT`, `NORMAL`) atau geser slider presisi. Jika Arduino terhubung ke USB, perintah override otomatis terkirim dan membunyikan buzzer / menggetarkan motor fisik secara nyata!
-- **Melalui Serial Monitor Arduino IDE:**  
-  Buka Serial Monitor pada 115200 baud dan kirim perintah berikut:
-  - `HELP` : Menampilkan panduan perintah lengkap.
-  - `DEMO ON` / `DEMO OFF` : Mengaktifkan/menonaktifkan mode simulasi.
-  - `FALL` : Mensimulasikan tongkat jatuh (kemiringan 75°, membunyikan alarm Morse SOS).
-  - `DROP` : Mensimulasikan tepi turunan / lubang (delta +25 cm, 3 pulsa getar).
-  - `WET` : Mensimulasikan genangan air (nilai sensor 850, 2 pulsa getar panjang).
-  - `NEAR` : Mensimulasikan rintangan sangat dekat (jarak 15 cm).
-  - `FRONT <cm>` / `DOWN <cm>` / `TILT <deg>` / `WATER <val>` : Mengatur nilai sensor manual.
-
-### 4. Menjalankan Simulasi Wokwi
-- **Opsi A (Browser):** Buka langsung tautan [https://wokwi.com/projects/474342215789115393](https://wokwi.com/projects/474342215789115393).
-- **Opsi B (Lokal via VS Code):** Buka folder `wokwi/` menggunakan ekstensi Wokwi for VS Code.
+> **Important: Ground Distance Auto-Calibration**  
+> During `setup()`, the downward-facing ultrasonic sensor captures 12 samples over the floor to calculate a reference `baseline` (~30 cm depending on mounting height). Hold the cane upright at a natural walking angle for the first 2 seconds after power-on.
 
 ---
 
-## Referensi Terkait
-- [Panduan Pengkabelan Lengkap (REAL_WIRING.md)](REAL_WIRING.md)
-- [Petunjuk Dashboard Web (dashboard/README.md)](dashboard/README.md)
+### 2. Running the Live Telemetry Dashboard (Next.js)
+
+1. Navigate to the `dashboard/` directory and install dependencies if not already done:
+   ```bash
+   cd dashboard
+   npm install
+   ```
+2. Start the local development server:
+   ```bash
+   npm run dev
+   ```
+3. Open a Chromium-based browser (**Google Chrome**, **Brave**, or **Microsoft Edge**) at [http://localhost:3000](http://localhost:3000).
+4. Click **Hubungkan Arduino** (Connect Arduino) and select the corresponding USB serial port.
+5. Telemetry streams instantly into the dashboard:
+   - Live 2D CAD blueprint showing real cane tilt angle relative to the ground.
+   - Frontal obstacle radar clearance indicator.
+   - Ground drop-off delta monitor.
+   - Surface conductivity index.
+   - Actuator states (PWM duty cycle and buzzer status).
+   - Sensor wiring integrity badges (`RIIL` vs `LEPAS`).
+
+*(Note: Close the Arduino IDE Serial Monitor before connecting through the browser to avoid serial port contention).*
+
+---
+
+### 3. Interactive Simulation & Serial Override Protocol
+
+KATANA firmware includes a bidirectional serial command parser. Developers can test every hazard condition, haptic cadence, and acoustic pattern without moving the physical cane:
+
+- **Via Next.js Dashboard:**  
+  Toggle **Mode Demo: AKTIF** to display simulation controls. Use the quick scenario presets (`JATUH (SOS)`, `TURUNAN`, `AIR`, `DEKAT`, `NORMAL`) or adjust sliders manually. If the physical Arduino is connected via USB, override commands are dispatched to the microcontroller in real time, causing the physical vibration motor and buzzer to react!
+- **Via Serial Terminal (Baud 115200):**  
+  Send text commands directly:
+  - `HELP` : Prints command syntax and parameter ranges.
+  - `DEMO ON` / `DEMO OFF` : Enables or disables sensor simulation mode.
+  - `FALL` : Simulates fall event (75 deg tilt, triggering SOS alarm).
+  - `DROP` : Simulates drop-off/pothole (baseline + 25 cm, 3 haptic pulses).
+  - `WET` : Simulates puddle contact (analog 850, 2 long haptic pulses).
+  - `NEAR` : Simulates close frontal obstacle (15 cm).
+  - `FRONT <cm>` : Overrides front obstacle distance (e.g., `FRONT 25`).
+  - `DOWN <cm>` : Overrides downward ground distance (e.g., `DOWN 55`).
+  - `TILT <deg>` : Overrides tilt angle (e.g., `TILT 72`).
+  - `WATER <val>` : Overrides moisture sensor reading (e.g., `WATER 900`).
+
+---
+
+### 4. Running Wokwi Virtual Simulation
+
+- **Browser Edition:** Open [https://wokwi.com/projects/474342215789115393](https://wokwi.com/projects/474342215789115393).
+- **Local VS Code Edition:** Open the `wokwi/` folder with the Wokwi for VS Code extension installed and launch `wokwi.toml`.
+
+---
+
+## Technical Specifications
+
+| Parameter | Specification |
+|---|---|
+| **Core Microcontroller** | ATmega328P (8-bit AVR, 16 MHz, 32KB Flash, 2KB SRAM) |
+| **Supply Voltage** | 5V DC via USB / 5V 2A portable battery bank |
+| **Front Obstacle Range** | 2 cm - 100 cm effective detection window (40 kHz ultrasonic) |
+| **Drop-off Threshold** | Delta > 15 cm above ground baseline |
+| **Moisture Sensitivity** | Conductive FR-4 grid; threshold ADC > 650 (0-1023 range) |
+| **Tilt Detection** | 6-Axis MPU6050 (accelerometer-derived roll/pitch vector) |
+| **Haptic Actuator** | Coreless vibration motor driven via PWM pin D5 (220/255 duty cycle) |
+| **Acoustic Actuator** | 5V Active Buzzer driven via BC547 NPN transistor switch (D6) |
+| **Communication** | UART Serial at 115200 Baud, Web Serial API compliant |
+
+---
+
+## Documentation Links
+
+- [Physical Wiring & Pinout Guide (REAL_WIRING.md)](REAL_WIRING.md)
+- [Web Serial Telemetry Dashboard Guide (dashboard/README.md)](dashboard/README.md)
