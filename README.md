@@ -73,7 +73,7 @@ Jika beberapa kondisi bahaya terjadi secara bersamaan, sistem menerapkan **prior
 Firmware KATANA kini mendukung mode pengujian override sensor langsung melalui serial. Anda dapat menguji seluruh skenario bahaya tanpa harus menggerakkan hardware fisik:
 
 - **Melalui Dashboard Next.js:**  
-  Klik toggle **Mode Demo: AKTIF** dan gunakan tombol skenario instan (`🚨 JATUH (SOS)`, `⚠️ TURUNAN`, `💧 AIR`, `🛑 DEKAT`, `✅ NORMAL`) atau geser slider presisi. Jika Arduino terhubung ke USB, perintah override otomatis terkirim dan membunyikan buzzer / menggetarkan motor fisik secara nyata!
+  Klik toggle **Mode Demo: AKTIF** dan gunakan tombol skenario instan (`JATUH (SOS)`, `TURUNAN`, `AIR`, `DEKAT`, `NORMAL`) atau geser slider presisi. Jika Arduino terhubung ke USB, perintah override otomatis terkirim dan membunyikan buzzer / menggetarkan motor fisik secara nyata!
 - **Melalui Serial Monitor Arduino IDE:**  
   Buka Serial Monitor pada 115200 baud dan kirim perintah berikut:
   - `HELP` : Menampilkan panduan perintah lengkap.

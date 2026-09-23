@@ -436,48 +436,48 @@ export default function KatanaDashboard() {
     if (s.includes("JATUH") || s.includes("FALL")) {
       return {
         type: "danger",
-        title: "🚨 PERINGATAN: TONGKAT TERJATUH! (ALARM SOS AKTIF)",
+        title: "[BAHAYA] TONGKAT TERJATUH (ALARM SOS AKTIF)",
         desc: "Buzzer fisik berbunyi dengan pola Morse SOS. Segera tegakkan tongkat kembali."
       };
     }
     if (s.includes("TURUNAN") || s.includes("DROP")) {
       return {
         type: "warning",
-        title: "⚠️ WASPADA: ADA TEPI TURUNAN / JURANG DI DEPAN",
+        title: "[WASPADA] ADA TEPI TURUNAN / JURANG DI DEPAN",
         desc: "Perubahan elevasi lantai > 15 cm. Motor getar memberikan 3 kali pulsa kuat."
       };
     }
     if (s.includes("BASAH") || s.includes("WATER")) {
       return {
         type: "warning",
-        title: "💧 PERHATIAN: MENDETEKSI GENANGAN AIR DI DEPAN",
+        title: "[PERHATIAN] MENDETEKSI GENANGAN AIR DI DEPAN",
         desc: "Pelat sensor mendeteksi area basah. Motor getar memberikan 2 kali getaran panjang."
       };
     }
     if (s.includes("DEKAT")) {
       return {
         type: "danger",
-        title: "🛑 BAHAYA: RINTANGAN SANGAT DEKAT (< 20 CM)",
+        title: "[BAHAYA] RINTANGAN SANGAT DEKAT (< 20 CM)",
         desc: "Ada objek penghalang tepat di depan badan pengguna. Hentikan langkah!"
       };
     }
     if (s.includes("SEDANG") || s.includes("WASPADA")) {
       return {
         type: "warning",
-        title: "🚶 PERHATIAN: RINTANGAN DI DEPAN (50-100 CM)",
+        title: "[PERHATIAN] RINTANGAN DI DEPAN (50-100 CM)",
         desc: "Objek terdeteksi mendekat. Pulsa getaran motor di gagang mulai terasa bertahap."
       };
     }
     if (s.includes("NORMAL")) {
       return {
         type: "normal",
-        title: "✅ JALUR AMAN & BEBAS HAMBATAN",
+        title: "[AMAN] JALUR BEBAS HAMBATAN",
         desc: "Semua sensor dalam batas aman normal. Pengguna dapat melangkah leluasa."
       };
     }
     return {
       type: "standby",
-      title: "⏳ MENUNGGU SENSOR TERHUBUNG",
+      title: "[STANDBY] MENUNGGU SENSOR TERHUBUNG",
       desc: "Sistem online. Tancapkan kabel modul sensor fisik ke Arduino untuk mulai pemindaian."
     };
   };
@@ -931,7 +931,7 @@ export default function KatanaDashboard() {
               {/* Fall Alert Overlay */}
               {data.mpuConnected && data.tiltDeg !== null && data.tiltDeg > 60 && (
                 <div className="absolute top-4 px-4 py-2 bg-rose-600 text-white font-bold text-xs rounded-lg shadow-lg animate-bounce">
-                  ⚠️ PERINGATAN: TONGKAT TERJATUH! (SUARA SOS AKTIF)
+                  [PERINGATAN] TONGKAT TERJATUH (SUARA SOS AKTIF)
                 </div>
               )}
             </div>
@@ -1107,35 +1107,35 @@ export default function KatanaDashboard() {
               onClick={() => triggerPreset("FALL")}
               className="px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 cursor-pointer"
             >
-              🚨 JATUH (SOS)
+              JATUH (SOS)
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("DROP")}
               className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 cursor-pointer"
             >
-              ⚠️ TURUNAN
+              TURUNAN
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("WET")}
               className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/40 text-sky-600 dark:text-sky-300 border border-sky-200 dark:border-sky-900 cursor-pointer"
             >
-              💧 AIR BASAH
+              AIR BASAH
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("NEAR")}
               className="px-2 py-0.5 rounded bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-900 cursor-pointer"
             >
-              🛑 OBJEK DEKAT
+              OBJEK DEKAT
             </button>
             <button
               type="button"
               onClick={() => triggerPreset("NORMAL")}
               className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 cursor-pointer"
             >
-              ✅ NORMAL
+              NORMAL
             </button>
             <button
               type="button"
@@ -1160,7 +1160,7 @@ export default function KatanaDashboard() {
                   Simulasi Sensor (Wokwi Style)
                 </span>
                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                  {isConnected ? "🟢 Sinkron ke Arduino USB Fisik" : "⚪ Mode Tampilan UI (USB Lepas)"}
+                  {isConnected ? "[ONLINE] Sinkron ke Arduino USB Fisik" : "[OFFLINE] Mode Tampilan UI (USB Lepas)"}
                 </span>
               </div>
             </div>
@@ -1183,28 +1183,28 @@ export default function KatanaDashboard() {
                 onClick={() => triggerPreset("FALL")}
                 className="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 font-medium text-left cursor-pointer transition-colors"
               >
-                🚨 Tongkat Jatuh (SOS)
+                Tongkat Jatuh (SOS)
               </button>
               <button
                 type="button"
                 onClick={() => triggerPreset("DROP")}
                 className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-300 font-medium text-left cursor-pointer transition-colors"
               >
-                ⚠️ Tepi Jurang (+25cm)
+                Tepi Jurang (+25cm)
               </button>
               <button
                 type="button"
                 onClick={() => triggerPreset("WET")}
                 className="px-2.5 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/50 border border-sky-200 dark:border-sky-900 text-sky-700 dark:text-sky-300 font-medium text-left cursor-pointer transition-colors"
               >
-                💧 Genangan Air (&gt;650)
+                Genangan Air (&gt;650)
               </button>
               <button
                 type="button"
                 onClick={() => triggerPreset("NEAR")}
                 className="px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 font-medium text-left cursor-pointer transition-colors"
               >
-                🛑 Objek Dekat (12cm)
+                Objek Dekat (12cm)
               </button>
             </div>
             <button
@@ -1212,7 +1212,7 @@ export default function KatanaDashboard() {
               onClick={() => triggerPreset("NORMAL")}
               className="w-full px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 font-medium text-center text-xs cursor-pointer transition-colors"
             >
-              ✅ Kembalikan Kondisi Normal Aman
+              Kembalikan Kondisi Normal Aman
             </button>
           </div>
 

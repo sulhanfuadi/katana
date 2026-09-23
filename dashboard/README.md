@@ -12,11 +12,11 @@ Dashboard telemetri live berbasis web untuk tongkat pintar tunanetra KATANA deng
    - Stream log serial di Serial Monitor Arduino dan Dashboard terminal langsung menampilkan output `[SIMULASI] ...` secara real-time.
    - Jika USB tidak dicolok, dashboard tetap dapat disimulasikan secara offline di UI.
 3. **Pintasan Skenario Cepat (Wokwi Style)**:
-   - 🚨 `JATUH (SOS)`: Mengatur kemiringan tongkat ke 75° dan memicu alarm Morse SOS.
-   - ⚠️ `TURUNAN`: Mengatur delta sensor bawah ke +25 cm dan memicu 3 pulsa getar.
-   - 💧 `AIR BASAH`: Mengatur sensor air ke 850 dan memicu 2 getaran panjang.
-   - 🛑 `OBJEK DEKAT`: Mengatur sensor depan ke 12 cm dan memicu getaran rapat bahaya.
-   - ✅ `NORMAL`: Mengembalikan seluruh sensor ke kondisi aman jalan.
+   - `JATUH (SOS)`: Mengatur kemiringan tongkat ke 75° dan memicu alarm Morse SOS.
+   - `TURUNAN`: Mengatur delta sensor bawah ke +25 cm dan memicu 3 pulsa getar.
+   - `AIR BASAH`: Mengatur sensor air ke 850 dan memicu 2 getaran panjang.
+   - `OBJEK DEKAT`: Mengatur sensor depan ke 12 cm dan memicu getaran rapat bahaya.
+   - `NORMAL`: Mengembalikan seluruh sensor ke kondisi aman jalan.
 4. **Terminal Serial Monitor Interaktif**: Dilengkapi input bar dan tombol pintasan perintah serial (`HELP`, `FRONT <cm>`, `TILT <deg>`, `DEMO ON`, `DEMO OFF`).
 5. **Visual CAD Rangka Tongkat 2D**: Bergerak secara fisik mengikuti derajat kemiringan MPU6050 terhadap garis lantai datar.
 6. **Multi-Theme**: Mendukung Gelap (Dark), Terang (Paper Light), dan Otomatis (Sistem).
