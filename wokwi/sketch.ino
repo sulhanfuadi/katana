@@ -66,6 +66,101 @@ bool dropConfirmed = false;
 bool fallConfirmed = false;
 bool vibrationOn = false;
 
+// Mode Simulasi / Override Serial
+bool demoMode = false;
+float simFrontCm = 80.0;
+float simDownCm = 30.0;
+float simTiltDeg = 12.0;
+int simWaterVal = 220;
+String serialBuffer = "";
+
+void processSerialCommand(String cmd) {
+  cmd.trim();
+  if (cmd.length() == 0) return;
+  String upper = cmd;
+  upper.toUpperCase();
+
+  if (upper == "HELP" || upper == "?") {
+    Serial.println(F("\n--- KATANA WOKWI INTERACTIVE COMMANDS ---"));
+    Serial.println(F("DEMO ON / DEMO OFF"));
+    Serial.println(F("FRONT <cm> | DOWN <cm> | TILT <deg> | WATER <val>"));
+    Serial.println(F("FALL | DROP | WET | NEAR | NORMAL\n"));
+    return;
+  }
+  if (upper == "DEMO ON" || upper == "DEMO:ON" || upper == "SIM 1") {
+    demoMode = true;
+    Serial.println(F("[SISTEM] >>> MODE DEMO AKTIF <<<"));
+    return;
+  }
+  if (upper == "DEMO OFF" || upper == "DEMO:OFF" || upper == "SIM 0") {
+    demoMode = false;
+    Serial.println(F("[SISTEM] >>> MODE DEMO NONAKTIF <<<"));
+    return;
+  }
+  if (upper == "FALL" || upper == "DEMO:FALL") {
+    demoMode = true;
+    simTiltDeg = 75.0;
+    Serial.println(F("[SISTEM] Skenario: Tongkat Terjatuh"));
+    return;
+  }
+  if (upper == "DROP" || upper == "DEMO:DROP") {
+    demoMode = true;
+    simDownCm = downBaselineCm + 25.0;
+    simTiltDeg = 15.0;
+    Serial.println(F("[SISTEM] Skenario: Tepi Turunan"));
+    return;
+  }
+  if (upper == "WET" || upper == "DEMO:WET") {
+    demoMode = true;
+    simWaterVal = 850;
+    Serial.println(F("[SISTEM] Skenario: Genangan Air"));
+    return;
+  }
+  if (upper == "NEAR" || upper == "DEMO:NEAR") {
+    demoMode = true;
+    simFrontCm = 15.0;
+    Serial.println(F("[SISTEM] Skenario: Objek Dekat"));
+    return;
+  }
+  if (upper == "NORMAL" || upper == "RESET" || upper == "DEMO:NORMAL") {
+    demoMode = true;
+    simFrontCm = 120.0;
+    simDownCm = downBaselineCm;
+    simTiltDeg = 12.0;
+    simWaterVal = 180;
+    Serial.println(F("[SISTEM] Skenario: Kondisi Normal"));
+    return;
+  }
+
+  if (upper.startsWith("DEMO:")) upper = upper.substring(5);
+  int sep = upper.indexOf('=');
+  if (sep == -1) sep = upper.indexOf(' ');
+  if (sep != -1) {
+    String key = upper.substring(0, sep);
+    key.trim();
+    float val = upper.substring(sep + 1).toFloat();
+    demoMode = true;
+    if (key == "FRONT" || key == "DEPAN") simFrontCm = val;
+    else if (key == "DOWN" || key == "BAWAH") simDownCm = val;
+    else if (key == "TILT" || key == "SUDUT") simTiltDeg = val;
+    else if (key == "WATER" || key == "AIR") simWaterVal = (int)val;
+  }
+}
+
+void checkSerialInput() {
+  while (Serial.available()) {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
+      if (serialBuffer.length() > 0) {
+        processSerialCommand(serialBuffer);
+        serialBuffer = "";
+      }
+    } else {
+      if (serialBuffer.length() < 64) serialBuffer += c;
+    }
+  }
+}
+
 void writeMPU(byte reg, byte value) {
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(reg);
@@ -121,21 +216,32 @@ void calibrateDownBaseline() {
 }
 
 void updateInputs() {
+  checkSerialInput();
   unsigned long now = millis();
-  frontCm = readUltrasonicCm(PIN_FRONT_TRIG, PIN_FRONT_ECHO);
-  delayMicroseconds(2500); // reduce cross-talk between the two ultrasonic modules
-  downCm = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO);
-  waterValue = analogRead(PIN_WATER_SIM);
-  dropDeltaCm = (int)(downCm - downBaselineCm);
-  if (dropDeltaCm < 0) dropDeltaCm = 0;
 
-  float ax = 0.0, ay = 0.0, az = 1.0;
-  if (readMPUAccel(ax, ay, az)) {
-    float magnitude = sqrt(ax * ax + ay * ay + az * az);
-    if (magnitude > 0.05) {
-      float ratio = fabs(az) / magnitude;
-      ratio = constrain(ratio, 0.0f, 1.0f);
-      tiltDeg = acos(ratio) * 180.0 / PI;
+  if (demoMode) {
+    frontCm = simFrontCm;
+    downCm = simDownCm;
+    tiltDeg = simTiltDeg;
+    waterValue = simWaterVal;
+    dropDeltaCm = (int)(downCm - downBaselineCm);
+    if (dropDeltaCm < 0) dropDeltaCm = 0;
+  } else {
+    frontCm = readUltrasonicCm(PIN_FRONT_TRIG, PIN_FRONT_ECHO);
+    delayMicroseconds(2500); // reduce cross-talk between the two ultrasonic modules
+    downCm = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO);
+    waterValue = analogRead(PIN_WATER_SIM);
+    dropDeltaCm = (int)(downCm - downBaselineCm);
+    if (dropDeltaCm < 0) dropDeltaCm = 0;
+
+    float ax = 0.0, ay = 0.0, az = 1.0;
+    if (readMPUAccel(ax, ay, az)) {
+      float magnitude = sqrt(ax * ax + ay * ay + az * az);
+      if (magnitude > 0.05) {
+        float ratio = fabs(az) / magnitude;
+        ratio = constrain(ratio, 0.0f, 1.0f);
+        tiltDeg = acos(ratio) * 180.0 / PI;
+      }
     }
   }
 

@@ -72,6 +72,17 @@ bool dropConfirmed  = false;
 bool fallConfirmed  = false;
 bool vibrationOn    = false;
 
+// Mode Simulasi / Override Serial (seperti di Wokwi)
+bool demoMode       = false;
+float simFrontCm    = 80.0;
+float simDownCm     = 30.0;
+float simTiltDeg    = 12.0;
+int simWaterVal     = 220;
+String serialBuffer = "";
+
+void processSerialCommand(String cmd);
+void checkSerialInput();
+
 void writeMPU(byte reg, byte value) {
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(reg);
@@ -134,40 +145,196 @@ void calibrateDownBaseline() {
   }
 }
 
+void processSerialCommand(String cmd) {
+  cmd.trim();
+  if (cmd.length() == 0) return;
+
+  String upper = cmd;
+  upper.toUpperCase();
+
+  if (upper == "HELP" || upper == "?") {
+    Serial.println(F("\n=================================================="));
+    Serial.println(F("       KATANA SERIAL SIMULATION CONSOLE           "));
+    Serial.println(F("=================================================="));
+    Serial.println(F("Perintah Dasar:"));
+    Serial.println(F("  DEMO ON   -> Aktifkan mode simulasi / override"));
+    Serial.println(F("  DEMO OFF  -> Kembali ke sensor fisik asli"));
+    Serial.println(F(""));
+    Serial.println(F("Atur Sensor Manual:"));
+    Serial.println(F("  FRONT <cm>   -> Jarak depan (misal: FRONT 15)"));
+    Serial.println(F("  DOWN <cm>    -> Jarak bawah/turunan (misal: DOWN 55)"));
+    Serial.println(F("  TILT <deg>   -> Kemiringan tongkat (misal: TILT 75)"));
+    Serial.println(F("  WATER <val>  -> Sensor air 0-1023 (misal: WATER 750)"));
+    Serial.println(F(""));
+    Serial.println(F("Skenario Cepat (Preset Wokwi):"));
+    Serial.println(F("  FALL    -> Simulasi Tongkat Jatuh (Alarm SOS)"));
+    Serial.println(F("  DROP    -> Simulasi Tepi Turunan / Lubang"));
+    Serial.println(F("  WET     -> Simulasi Genangan Air"));
+    Serial.println(F("  NEAR    -> Simulasi Objek Sangat Dekat"));
+    Serial.println(F("  NORMAL  -> Simulasi Kondisi Aman Normal"));
+    Serial.println(F("==================================================\n"));
+    return;
+  }
+
+  if (upper == "DEMO ON" || upper == "DEMO:ON" || upper == "SIM 1" || upper == "SIM ON") {
+    demoMode = true;
+    Serial.println(F("[SISTEM] >>> MODE DEMO AKTIF: Nilai sensor di-override via serial <<<"));
+    return;
+  }
+
+  if (upper == "DEMO OFF" || upper == "DEMO:OFF" || upper == "SIM 0" || upper == "SIM OFF") {
+    demoMode = false;
+    Serial.println(F("[SISTEM] >>> MODE DEMO NONAKTIF: Kembali membaca sensor fisik <<<"));
+    return;
+  }
+
+  if (upper == "FALL" || upper == "DEMO:FALL") {
+    demoMode = true;
+    simTiltDeg = 75.0;
+    Serial.println(F("[SISTEM] PRESET AKTIF: Tongkat Terjatuh (Kemiringan 75°)"));
+    return;
+  }
+
+  if (upper == "DROP" || upper == "DEMO:DROP") {
+    demoMode = true;
+    simDownCm = downBaselineCm + 25.0;
+    simTiltDeg = 15.0;
+    Serial.println(F("[SISTEM] PRESET AKTIF: Tepi Turunan / Lubang (+25cm delta)"));
+    return;
+  }
+
+  if (upper == "WET" || upper == "WATER_ALERT" || upper == "DEMO:WET") {
+    demoMode = true;
+    simWaterVal = 850;
+    Serial.println(F("[SISTEM] PRESET AKTIF: Genangan Air (Nilai 850)"));
+    return;
+  }
+
+  if (upper == "NEAR" || upper == "DEMO:NEAR") {
+    demoMode = true;
+    simFrontCm = 15.0;
+    Serial.println(F("[SISTEM] PRESET AKTIF: Rintangan Depan Sangat Dekat (15cm)"));
+    return;
+  }
+
+  if (upper == "NORMAL" || upper == "RESET" || upper == "DEMO:NORMAL") {
+    demoMode = true;
+    simFrontCm = 120.0;
+    simDownCm = downBaselineCm;
+    simTiltDeg = 12.0;
+    simWaterVal = 180;
+    Serial.println(F("[SISTEM] PRESET AKTIF: Kondisi Aman Normal"));
+    return;
+  }
+
+  // Handle format: DEMO:KEY=VAL atau KEY=VAL atau KEY VAL
+  if (upper.startsWith("DEMO:")) {
+    upper = upper.substring(5);
+  }
+
+  int sep = upper.indexOf('=');
+  if (sep == -1) sep = upper.indexOf(' ');
+  if (sep != -1) {
+    String key = upper.substring(0, sep);
+    key.trim();
+    String valStr = upper.substring(sep + 1);
+    valStr.trim();
+    float val = valStr.toFloat();
+
+    demoMode = true; // Otomatis aktifkan demo jika ada nilai yang diset
+
+    if (key == "FRONT" || key == "DEPAN") {
+      simFrontCm = val;
+      Serial.print(F("[SIM] Jarak Depan diset ke: "));
+      Serial.print(simFrontCm, 0);
+      Serial.println(F(" cm"));
+    } else if (key == "DOWN" || key == "BAWAH") {
+      simDownCm = val;
+      Serial.print(F("[SIM] Jarak Bawah diset ke: "));
+      Serial.print(simDownCm, 0);
+      Serial.println(F(" cm"));
+    } else if (key == "TILT" || key == "SUDUT") {
+      simTiltDeg = val;
+      Serial.print(F("[SIM] Kemiringan diset ke: "));
+      Serial.print(simTiltDeg, 1);
+      Serial.println(F("°"));
+    } else if (key == "WATER" || key == "AIR") {
+      simWaterVal = (int)val;
+      Serial.print(F("[SIM] Sensor Air diset ke: "));
+      Serial.println(simWaterVal);
+    }
+  }
+}
+
+void checkSerialInput() {
+  while (Serial.available()) {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
+      if (serialBuffer.length() > 0) {
+        processSerialCommand(serialBuffer);
+        serialBuffer = "";
+      }
+    } else {
+      if (serialBuffer.length() < 64) {
+        serialBuffer += c;
+      }
+    }
+  }
+}
+
 void updateInputs() {
+  checkSerialInput();
+
   unsigned long now = millis();
   
-  // 1. Baca sensor depan
-  frontCm = readUltrasonicCm(PIN_FRONT_TRIG, PIN_FRONT_ECHO, frontConnected);
-  delayMicroseconds(2500); // Cegah cross-talk ultrasonik
-  
-  // 2. Baca sensor bawah
-  downCm = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO, downConnected);
-  
-  // Hitung delta bawah hanya jika sensor bawah terhubung
-  if (downConnected) {
+  if (demoMode) {
+    // Mode Simulasi / Override Serial
+    frontConnected = true;
+    downConnected  = true;
+    mpuConnected   = true;
+    waterConnected = true;
+
+    frontCm     = simFrontCm;
+    downCm      = simDownCm;
+    tiltDeg     = simTiltDeg;
+    waterValue  = simWaterVal;
+
     dropDeltaCm = (int)(downCm - downBaselineCm);
     if (dropDeltaCm < 0) dropDeltaCm = 0;
   } else {
-    dropDeltaCm = 0;
-  }
-
-  // 3. Baca sensor air
-  waterValue = analogRead(PIN_WATER_RAW);
-
-  // 4. Baca MPU6050
-  float ax = 0.0, ay = 0.0, az = 1.0;
-  if (readMPUAccel(ax, ay, az)) {
-    mpuConnected = true;
-    float magnitude = sqrt(ax * ax + ay * ay + az * az);
-    if (magnitude > 0.05) {
-      float ratio = fabs(az) / magnitude;
-      ratio = constrain(ratio, 0.0f, 1.0f);
-      tiltDeg = acos(ratio) * 180.0 / PI;
+    // Mode Fisik Nyata: Baca sensor fisik
+    // 1. Baca sensor depan
+    frontCm = readUltrasonicCm(PIN_FRONT_TRIG, PIN_FRONT_ECHO, frontConnected);
+    delayMicroseconds(2500); // Cegah cross-talk ultrasonik
+    
+    // 2. Baca sensor bawah
+    downCm = readUltrasonicCm(PIN_DOWN_TRIG, PIN_DOWN_ECHO, downConnected);
+    
+    // Hitung delta bawah hanya jika sensor bawah terhubung
+    if (downConnected) {
+      dropDeltaCm = (int)(downCm - downBaselineCm);
+      if (dropDeltaCm < 0) dropDeltaCm = 0;
+    } else {
+      dropDeltaCm = 0;
     }
-  } else {
-    mpuConnected = false;
-    tiltDeg = -1.0;
+
+    // 3. Baca sensor air
+    waterValue = analogRead(PIN_WATER_RAW);
+
+    // 4. Baca MPU6050
+    float ax = 0.0, ay = 0.0, az = 1.0;
+    if (readMPUAccel(ax, ay, az)) {
+      mpuConnected = true;
+      float magnitude = sqrt(ax * ax + ay * ay + az * az);
+      if (magnitude > 0.05) {
+        float ratio = fabs(az) / magnitude;
+        ratio = constrain(ratio, 0.0f, 1.0f);
+        tiltDeg = acos(ratio) * 180.0 / PI;
+      }
+    } else {
+      mpuConnected = false;
+      tiltDeg = -1.0;
+    }
   }
 
   // Filter deteksi turunan: HANYA aktif jika sensor bawah benar-benar TERHUBUNG (bukan lepas)
@@ -300,6 +467,7 @@ void setup() {
   selfTest();
   Serial.println(F("=================================================="));
   Serial.println(F("      KATANA SMART CANE - SYSTEM ONLINE           "));
+  Serial.println(F("  Ketik HELP di Serial Monitor untuk Mode Demo    "));
   Serial.println(F("=================================================="));
 }
 
@@ -312,45 +480,65 @@ void loop() {
   if (now - lastReportMs >= 400) {
     lastReportMs = now;
 
-    // Baris 1: Status Fisik Sambungan Setiap Sensor
-    Serial.print(F("[KONEKSI] "));
-    
-    // Sensor Depan
-    Serial.print(F("Depan:"));
-    if (frontConnected) {
-      Serial.print(F("RIIL("));
+    if (demoMode) {
+      // Telemetri Khusus Mode Simulasi / Override Serial
+      Serial.print(F("[SIMULASI] "));
+      Serial.print(F("Depan:SIM("));
       Serial.print(frontCm, 0);
       Serial.print(F("cm) "));
-    } else {
-      Serial.print(F("LEPAS "));
-    }
 
-    // Sensor Bawah
-    Serial.print(F("| Bawah:"));
-    if (downConnected) {
-      Serial.print(F("RIIL("));
+      Serial.print(F("| Bawah:SIM("));
       Serial.print(downCm, 0);
       Serial.print(F("cm) "));
-    } else {
-      Serial.print(F("LEPAS "));
-    }
 
-    // MPU6050
-    Serial.print(F("| IMU:"));
-    if (mpuConnected) {
-      Serial.print(F("RIIL("));
+      Serial.print(F("| IMU:SIM("));
       Serial.print(tiltDeg, 1);
       Serial.print(F("°) "));
+
+      Serial.print(F("| Air:SIM("));
+      Serial.print(waterValue);
+      Serial.print(F(")"));
     } else {
-      Serial.print(F("LEPAS "));
+      // Telemetri Hardware Fisik Riil
+      Serial.print(F("[KONEKSI] "));
+      
+      // Sensor Depan
+      Serial.print(F("Depan:"));
+      if (frontConnected) {
+        Serial.print(F("RIIL("));
+        Serial.print(frontCm, 0);
+        Serial.print(F("cm) "));
+      } else {
+        Serial.print(F("LEPAS "));
+      }
+
+      // Sensor Bawah
+      Serial.print(F("| Bawah:"));
+      if (downConnected) {
+        Serial.print(F("RIIL("));
+        Serial.print(downCm, 0);
+        Serial.print(F("cm) "));
+      } else {
+        Serial.print(F("LEPAS "));
+      }
+
+      // MPU6050
+      Serial.print(F("| IMU:"));
+      if (mpuConnected) {
+        Serial.print(F("RIIL("));
+        Serial.print(tiltDeg, 1);
+        Serial.print(F("°) "));
+      } else {
+        Serial.print(F("LEPAS "));
+      }
+
+      // Sensor Air
+      Serial.print(F("| Air:RIIL("));
+      Serial.print(waterValue);
+      Serial.print(F(")"));
     }
 
-    // Sensor Air
-    Serial.print(F("| Air:RIIL("));
-    Serial.print(waterValue);
-    Serial.print(F(")"));
-
-    // Baris 2: Status Keputusan & Aktuator
+    // Status Keputusan & Aktuator Fisik
     Serial.print(F(" || STATE: "));
     Serial.print(stateName(activeState));
     Serial.print(F(" | Motor: "));
