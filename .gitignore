@@ -20,6 +20,11 @@ build/
 .piolibdeps/
 .vscode/
 
+# Web / Next.js
+node_modules/
+.next/
+out/
+
 # Temporary / logic analyzer outputs
 *.vcd
 *.zip
