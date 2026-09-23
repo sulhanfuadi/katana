@@ -1,304 +1,339 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KATANA // Telemetry System</title>
-  <meta name="description" content="Technical telemetry & sensor diagnostics console for KATANA assistive smart cane.">
+  <title>KATANA - Monitor Tongkat Pintar Tunanetra</title>
+  <meta name="description" content="Dashboard pemantau kondisi tongkat pintar KATANA untuk mendeteksi rintangan, lubang, genangan air, dan kondisi jatuh secara langsung.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-shell">
-    <!-- Top Navigation -->
+    <!-- Navigasi Atas -->
     <header class="topbar">
       <div class="topbar-left">
-        <div class="monogram">KT</div>
+        <div class="brand-badge">KATANA</div>
         <div class="system-meta">
-          <div class="system-title">KATANA <span>v1.0.4</span></div>
-          <div class="system-sub">ASSISTIVE NAVIGATION TELEMETRY // ATMEGA328P</div>
+          <div class="system-title">Kawan Tunanetra <span>Monitor Langsung</span></div>
+          <div class="system-sub">Alat Bantu Navigasi & Keselamatan Jalan</div>
         </div>
       </div>
 
       <div class="topbar-right">
-        <div class="status-indicator" id="connectionStatus">
-          <span class="indicator-glyph" id="statusDot"></span>
-          <span class="indicator-label" id="statusText">OFFLINE</span>
+        <!-- Pilihan Tema -->
+        <div class="theme-select-wrap">
+          <label for="themeSelect" class="sr-only">Pilih Tema</label>
+          <select id="themeSelect" class="select-theme" title="Pilih tema tampilan">
+            <option value="dark">🌙 Mode Gelap</option>
+            <option value="light">☀️ Mode Terang</option>
+            <option value="system">💻 Ikuti Sistem</option>
+          </select>
         </div>
 
-        <button id="btnConnect" class="btn btn-solid">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          CONNECT SERIAL
+        <!-- Status Sambungan -->
+        <div class="status-indicator" id="connectionStatus">
+          <span class="indicator-glyph" id="statusDot"></span>
+          <span class="indicator-label" id="statusText">Belum Tersambung</span>
+        </div>
+
+        <button id="btnConnect" class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Hubungkan Arduino
         </button>
 
-        <button id="btnDisconnect" class="btn btn-outline" style="display: none;">
-          DISCONNECT
+        <button id="btnDisconnect" class="btn btn-danger" style="display: none;">
+          Putuskan Sambungan
         </button>
 
-        <button id="btnDemo" class="btn btn-subtle">
-          DEMO MODE
+        <button id="btnDemo" class="btn btn-outline" title="Coba gerakkan tongkat tanpa kabel Arduino">
+          Mode Coba (Demo)
         </button>
       </div>
     </header>
 
-    <!-- Main Workspace -->
-    <div class="workspace">
-      <!-- Master State Banner -->
-      <section class="state-banner" id="mainAlertBanner">
-        <div class="state-prefix">SYSTEM STATE</div>
-        <div class="state-main">
-          <div class="state-heading" id="alertStateText">STANDBY // NO SENSORS DETECTED</div>
-          <div class="state-sub" id="alertDesc">Connect hardware via USB to begin live telemetry streaming.</div>
+    <!-- Area Kerja Utama -->
+    <main class="workspace">
+      <!-- Banner Status Utama -->
+      <section class="state-banner banner-standby" id="mainAlertBanner">
+        <div class="banner-status-col">
+          <div class="banner-prefix">STATUS TONGKAT SAAT INI</div>
+          <div class="banner-heading" id="alertStateText">MENUNGGU SENSOR TERHUBUNG</div>
+          <div class="banner-desc" id="alertDesc">Colokkan kabel Arduino Nano ke laptop untuk membaca sensor tongkat secara langsung.</div>
         </div>
         <div class="actuator-cluster">
-          <div class="actuator-cell" id="cellMotor">
-            <span class="cell-label">HAPTIC MOTOR [D5]</span>
-            <span class="cell-value" id="valMotor">OFF</span>
+          <div class="actuator-box" id="cellMotor">
+            <span class="act-name">Getaran Gagang</span>
+            <span class="act-state" id="valMotor">Diam (OFF)</span>
+            <span class="act-hint">Pemberi tahu rintangan ke telapak</span>
           </div>
-          <div class="actuator-cell" id="cellBuzzer">
-            <span class="cell-label">SOS BUZZER [D6]</span>
-            <span class="cell-value" id="valBuzzer">IDLE</span>
+          <div class="actuator-box" id="cellBuzzer">
+            <span class="act-name">Suara Alarm (Buzzer)</span>
+            <span class="act-state" id="valBuzzer">Diam</span>
+            <span class="act-hint">Bunyi darurat jika tongkat jatuh</span>
           </div>
         </div>
       </section>
 
-      <!-- Primary Metrics Grid -->
+      <!-- 4 Kartu Sensor Utama -->
       <section class="grid-metrics">
-        <!-- Sensor 1: Front Obstacle -->
-        <div class="metric-panel" id="panelFront">
-          <div class="panel-head">
-            <span class="panel-tag">SONAR // FRONT</span>
-            <span class="panel-status status-nc" id="chipFront">UNPLUGGED</span>
+        <!-- 1. Sensor Depan -->
+        <div class="metric-card" id="cardFront">
+          <div class="card-top">
+            <div class="card-title-group">
+              <span class="card-title">1. Rintangan di Depan</span>
+              <span class="card-subtitle">Sensor ultrasonik atas (arah lurus)</span>
+            </div>
+            <span class="badge-status badge-unplugged" id="chipFront">Kabel Belum Dicolok</span>
           </div>
-          <div class="panel-value-row">
-            <div class="reading-num" id="valFront">--</div>
-            <div class="reading-unit">CM</div>
+          <div class="metric-display">
+            <div class="metric-num" id="valFront">--</div>
+            <div class="metric-unit">cm</div>
           </div>
-          <div class="wire-meter">
-            <div class="meter-bar" id="barFront" style="width: 0%;"></div>
-            <div class="tick-mark t-20" title="20cm"></div>
-            <div class="tick-mark t-50" title="50cm"></div>
-            <div class="tick-mark t-100" title="100cm"></div>
+          <div class="bar-track">
+            <div class="bar-fill" id="barFront" style="width: 0%;"></div>
+            <div class="tick-label t-20" title="Bahaya (<20 cm)">20 cm</div>
+            <div class="tick-label t-50" title="Waspada (<50 cm)">50 cm</div>
+            <div class="tick-label t-100" title="Jarak Jauh (<100 cm)">100 cm</div>
           </div>
-          <div class="panel-foot">
-            <span>PIN D2/D3</span>
-            <span id="frontZoneLabel" class="foot-highlight">CLEAR</span>
-          </div>
-        </div>
-
-        <!-- Sensor 2: Drop / Pothole -->
-        <div class="metric-panel" id="panelDown">
-          <div class="panel-head">
-            <span class="panel-tag">SONAR // FLOOR DROP</span>
-            <span class="panel-status status-nc" id="chipDown">UNPLUGGED</span>
-          </div>
-          <div class="panel-value-row">
-            <div class="reading-num" id="valDown">--</div>
-            <div class="reading-unit">CM</div>
-          </div>
-          <div class="sub-stat-row">
-            <span class="sub-label">FLOOR DELTA:</span>
-            <span class="sub-val" id="valDeltaDown">0 CM</span>
-          </div>
-          <div class="panel-foot">
-            <span id="lblBaseline">BASELINE 30 CM</span>
-            <span id="downStatusDesc" class="foot-highlight">LEVEL SURFACE</span>
+          <div class="card-footer">
+            <span class="card-pin">Pin: D2 (Echo) & D3 (Trig)</span>
+            <span class="card-verdict" id="frontZoneLabel">Jalur Bebas Hambatan</span>
           </div>
         </div>
 
-        <!-- Sensor 3: Tilt Angle -->
-        <div class="metric-panel" id="panelTilt">
-          <div class="panel-head">
-            <span class="panel-tag">IMU // INCLINATION</span>
-            <span class="panel-status status-nc" id="chipMpu">UNPLUGGED</span>
+        <!-- 2. Sensor Bawah (Turunan) -->
+        <div class="metric-card" id="cardDown">
+          <div class="card-top">
+            <div class="card-title-group">
+              <span class="card-title">2. Jurang / Tepi Turunan</span>
+              <span class="card-subtitle">Sensor bawah miring (arah lantai)</span>
+            </div>
+            <span class="badge-status badge-unplugged" id="chipDown">Kabel Belum Dicolok</span>
           </div>
-          <div class="panel-value-row">
-            <div class="reading-num" id="valTilt">--</div>
-            <div class="reading-unit">DEG</div>
+          <div class="metric-display">
+            <div class="metric-num" id="valDown">--</div>
+            <div class="metric-unit">cm</div>
           </div>
-          <div class="wire-meter">
-            <div class="meter-bar" id="barTilt" style="width: 0%;"></div>
-            <div class="tick-mark t-60" title="60° Limit"></div>
+          <div class="delta-row">
+            <span>Perubahan Jarak Lantai:</span>
+            <b id="valDeltaDown">+0 cm</b>
           </div>
-          <div class="panel-foot">
-            <span>AXIS X/Y/Z</span>
-            <span id="tiltStatusDesc" class="foot-highlight">VERTICAL 0°</span>
+          <div class="card-footer">
+            <span class="card-pin" id="lblBaseline">Lantai Normal: 30 cm</span>
+            <span class="card-verdict" id="downStatusDesc">Permukaan Datar Aman</span>
           </div>
         </div>
 
-        <!-- Sensor 4: Water Surface -->
-        <div class="metric-panel" id="panelWater">
-          <div class="panel-head">
-            <span class="panel-tag">PROBE // WATER LEVEL</span>
-            <span class="panel-status status-ok" id="chipWater">ACTIVE</span>
+        <!-- 3. Sensor Kemiringan (Jatuh) -->
+        <div class="metric-card" id="cardTilt">
+          <div class="card-top">
+            <div class="card-title-group">
+              <span class="card-title">3. Kemiringan Tongkat</span>
+              <span class="card-subtitle">Sensor gyro/kemiringan (MPU6050)</span>
+            </div>
+            <span class="badge-status badge-unplugged" id="chipMpu">Kabel Belum Dicolok</span>
           </div>
-          <div class="panel-value-row">
-            <div class="reading-num" id="valWater">240</div>
-            <div class="reading-unit">RAW</div>
+          <div class="metric-display">
+            <div class="metric-num" id="valTilt">--</div>
+            <div class="metric-unit">derajat</div>
           </div>
-          <div class="wire-meter">
-            <div class="meter-bar" id="barWater" style="width: 24%;"></div>
-            <div class="tick-mark t-650" title="Threshold 650"></div>
+          <div class="bar-track">
+            <div class="bar-fill" id="barTilt" style="width: 0%;"></div>
+            <div class="tick-label t-60" title="Batas Jatuh (60°)">60° (Jatuh)</div>
           </div>
-          <div class="panel-foot">
-            <span>PIN A0</span>
-            <span id="waterStatusDesc" class="foot-highlight">DRY SURFACE</span>
+          <div class="card-footer">
+            <span class="card-pin">Pin: A4 (SDA) & A5 (SCL)</span>
+            <span class="card-verdict" id="tiltStatusDesc">Tongkat Posisi Berdiri</span>
+          </div>
+        </div>
+
+        <!-- 4. Sensor Genangan Air -->
+        <div class="metric-card" id="cardWater">
+          <div class="card-top">
+            <div class="card-title-group">
+              <span class="card-title">4. Genangan Air / Basah</span>
+              <span class="card-subtitle">Pelat sensor air di ujung bawah</span>
+            </div>
+            <span class="badge-status badge-active" id="chipWater">Tersambung (Normal)</span>
+          </div>
+          <div class="metric-display">
+            <div class="metric-num" id="valWater">240</div>
+            <div class="metric-unit">/1023</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" id="barWater" style="width: 24%;"></div>
+            <div class="tick-label t-650" title="Batas Basah (>650)">Basah (&gt;650)</div>
+          </div>
+          <div class="card-footer">
+            <span class="card-pin">Pin: A0 (Analog)</span>
+            <span class="card-verdict" id="waterStatusDesc">Permukaan Kering</span>
           </div>
         </div>
       </section>
 
-      <!-- Visual Stage & Pin Matrix -->
+      <!-- Simulasi Visual 2D & Daftar Sambungan Pin -->
       <section class="grid-split">
-        <!-- Technical Cane CAD Simulation -->
-        <div class="schematic-panel">
-          <div class="panel-head">
-            <span class="panel-tag">ORIENTATION // CAD BLUEPRINT SIMULATION</span>
-            <span class="panel-coord" id="lblAngleCoordinate">ROTATION: 0.00°</span>
+        <!-- Visual Tongkat 2D Nyata -->
+        <div class="visual-panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Visual Gerakan Nyata Tongkat</div>
+              <div class="panel-desc">Gambar tongkat ini miring mengikuti gerakan fisik tangan Anda secara langsung</div>
+            </div>
+            <div class="angle-badge" id="lblAngleCoordinate">Kemiringan: 0.0°</div>
           </div>
-          <div class="viewport-box">
-            <!-- Gridlines -->
-            <div class="cad-gridlines"></div>
-            <div class="horizon-line"></div>
-            <div class="angle-protractor"></div>
-
-            <!-- Virtual Cane Line -->
-            <div class="cane-chassis" id="caneObject">
-              <div class="handle-bracket">
-                <div class="haptic-ping" id="vibWaves"></div>
-              </div>
-              <div class="shaft-line">
-                <div class="sensor-node node-front" title="Front Sensor"></div>
-                <div class="sensor-node node-down" title="Down Sensor"></div>
-                <div class="sensor-node node-water" title="Water Sensor"></div>
-              </div>
-              <div class="ferrule-tip"></div>
+          <div class="canvas-box">
+            <!-- Garis Garis Panduan -->
+            <div class="horizon-plane">
+              <span class="horizon-text">Lantai Datar</span>
+            </div>
+            <div class="arc-protractor">
+              <span class="arc-label-left">60° (Jatuh Kiri)</span>
+              <span class="arc-label-mid">Tegak (0°)</span>
+              <span class="arc-label-right">60° (Jatuh Kanan)</span>
             </div>
 
-            <div class="alarm-crosshair" id="fallWarningOverlay">
-              <span class="alarm-text">[ ALERT // CRITICAL CANE INCLINATION > 60° ]</span>
+            <!-- Batang Tongkat Virtual -->
+            <div class="cane-stem" id="caneObject">
+              <div class="handle-grip">
+                <div class="handle-vibe-ring" id="vibWaves"></div>
+              </div>
+              <div class="cane-pipe">
+                <div class="node-sensor node-us-front" title="HC-SR04 Depan">Depan</div>
+                <div class="node-sensor node-us-down" title="HC-SR04 Bawah">Bawah</div>
+                <div class="node-sensor node-water-plate" title="Pelat Air">Air</div>
+              </div>
+              <div class="rubber-foot"></div>
+            </div>
+
+            <div class="fall-alert-sign" id="fallWarningOverlay">
+              <span>⚠️ PERINGATAN: TONGKAT TERJATUH! (SUARA SOS AKTIF)</span>
             </div>
           </div>
         </div>
 
-        <!-- Hardware Pin Status Matrix -->
-        <div class="matrix-panel">
-          <div class="panel-head">
-            <span class="panel-tag">HARDWARE MATRIX // MAPPING</span>
-            <span class="panel-coord">NANO V3</span>
+        <!-- Tabel Periksa Kabel (Mudah Dipahami) -->
+        <div class="checklist-panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Pemeriksaan Kabel Komponen</div>
+              <div class="panel-desc">Cek cepat apakah kabel Anda sudah tertancap dengan benar ke Arduino Nano</div>
+            </div>
           </div>
-          <div class="matrix-list">
-            <div class="matrix-row" id="rowFront">
-              <div class="col-id">01</div>
-              <div class="col-label">
-                <div class="col-name">FRONT ULTRASONIC</div>
-                <div class="col-pins">TRIG: D3 // ECHO: D2</div>
+          <div class="check-list">
+            <div class="check-row" id="rowFront">
+              <div class="check-num">1</div>
+              <div class="check-details">
+                <div class="check-name">Sensor Depan (HC-SR04)</div>
+                <div class="check-guide">Pin D3 (Trig) & D2 (Echo) • Daya 5V/GND</div>
               </div>
-              <div class="col-state state-disconnected" id="badgeFront">NC</div>
+              <div class="check-badge badge-unplugged" id="badgeFront">Kabel Belum Dicolok</div>
             </div>
 
-            <div class="matrix-row" id="rowDown">
-              <div class="col-id">02</div>
-              <div class="col-label">
-                <div class="col-name">DOWN ULTRASONIC</div>
-                <div class="col-pins">TRIG: D11 // ECHO: D10</div>
+            <div class="check-row" id="rowDown">
+              <div class="check-num">2</div>
+              <div class="check-details">
+                <div class="check-name">Sensor Bawah (HC-SR04)</div>
+                <div class="check-guide">Pin D11 (Trig) & D10 (Echo) • Daya 5V/GND</div>
               </div>
-              <div class="col-state state-disconnected" id="badgeDown">NC</div>
+              <div class="check-badge badge-unplugged" id="badgeDown">Kabel Belum Dicolok</div>
             </div>
 
-            <div class="matrix-row" id="rowMpu">
-              <div class="col-id">03</div>
-              <div class="col-label">
-                <div class="col-name">IMU ACCELEROMETER</div>
-                <div class="col-pins">SDA: A4 // SCL: A5 (0x68)</div>
+            <div class="check-row" id="rowMpu">
+              <div class="check-num">3</div>
+              <div class="check-details">
+                <div class="check-name">Sensor Kemiringan (MPU6050)</div>
+                <div class="check-guide">Pin A4 (SDA) & A5 (SCL) • Daya 5V/GND</div>
               </div>
-              <div class="col-state state-disconnected" id="badgeMpu">NC</div>
+              <div class="check-badge badge-unplugged" id="badgeMpu">Kabel Belum Dicolok</div>
             </div>
 
-            <div class="matrix-row" id="rowWater">
-              <div class="col-id">04</div>
-              <div class="col-label">
-                <div class="col-name">WATER LEVEL PLATE</div>
-                <div class="col-pins">SIGNAL: A0 // 5V // GND</div>
+            <div class="check-row" id="rowWater">
+              <div class="check-num">4</div>
+              <div class="check-details">
+                <div class="check-name">Sensor Air (Pelat)</div>
+                <div class="check-guide">Pin A0 (S) • Daya (+) 5V & (-) GND</div>
               </div>
-              <div class="col-state state-connected" id="badgeWater">OK</div>
+              <div class="check-badge badge-active" id="badgeWater">Tersambung (OK)</div>
             </div>
 
-            <div class="matrix-row" id="rowMotor">
-              <div class="col-id">05</div>
-              <div class="col-label">
-                <div class="col-name">VIBRATION MOTOR</div>
-                <div class="col-pins">PWM OUT: PIN D5</div>
+            <div class="check-row" id="rowMotor">
+              <div class="check-num">5</div>
+              <div class="check-details">
+                <div class="check-name">Modul Motor Getar</div>
+                <div class="check-guide">Pin D5 (PWM) • Daya 5V/GND</div>
               </div>
-              <div class="col-state state-ready" id="badgeMotor">READY</div>
+              <div class="check-badge badge-ready" id="badgeMotor">Siap Digunakan</div>
             </div>
 
-            <div class="matrix-row" id="rowBuzzer">
-              <div class="col-id">06</div>
-              <div class="col-label">
-                <div class="col-name">SOS LOCATOR BUZZER</div>
-                <div class="col-pins">TRIGGER: D6 // BC547</div>
+            <div class="check-row" id="rowBuzzer">
+              <div class="check-num">6</div>
+              <div class="check-details">
+                <div class="check-name">Buzzer Suara Darurat</div>
+                <div class="check-guide">Pin D6 melalui Resistor 1kΩ & Transistor BC547</div>
               </div>
-              <div class="col-state state-ready" id="badgeBuzzer">READY</div>
+              <div class="check-badge badge-ready" id="badgeBuzzer">Siap Digunakan</div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Raw Stream Console -->
+      <!-- Terminal Teks Data Asli -->
       <section class="console-panel">
-        <div class="console-bar">
-          <div class="console-title">SERIAL DATA FEED // 115200 BAUD</div>
-          <div class="console-actions">
-            <label class="check-wrap">
+        <div class="console-header">
+          <div class="console-title">Aliran Data Serial Mentah (115200 Baud)</div>
+          <div class="console-options">
+            <label class="check-label">
               <input type="checkbox" id="chkAutoscroll" checked>
-              <span>AUTOSCROLL</span>
+              <span>Gulir Otomatis (Autoscroll)</span>
             </label>
-            <button id="btnClearLog" class="btn btn-tiny">CLEAR</button>
+            <button id="btnClearLog" class="btn btn-sm">Bersihkan Teks</button>
           </div>
         </div>
-        <div class="console-screen" id="terminalBody">
-          <div class="log-entry sys">> SYSTEM INITIALIZED. WAITING FOR SERIAL STREAM...</div>
+        <div class="console-output" id="terminalBody">
+          <div class="log-entry system-note">> Sistem siap. Klik tombol "Hubungkan Arduino" atau gunakan "Mode Coba (Demo)".</div>
         </div>
       </section>
-    </div>
+    </main>
   </div>
 
-  <!-- Minimalist Demo Controller Panel -->
-  <aside class="demo-dock" id="demoDrawer" style="display: none;">
+  <!-- Panel Pengatur Mode Coba (Demo) -->
+  <aside class="demo-drawer" id="demoDrawer" style="display: none;">
     <div class="demo-top">
-      <span class="demo-title">// MANUAL DEMO CONTROLS</span>
-      <button id="btnCloseDemo" class="btn-x">×</button>
+      <div class="demo-title">🎮 Simulasi Manual (Coba Tampilan)</div>
+      <button id="btnCloseDemo" class="btn-close" title="Tutup panel demo">✕</button>
     </div>
-    <div class="demo-fields">
-      <div class="field-item">
-        <div class="field-head">
-          <span>FRONT DISTANCE</span>
-          <b id="lblDemoFront">80 CM</b>
+    <div class="demo-controls">
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span>Jarak Rintangan Depan</span>
+          <b id="lblDemoFront">80 cm</b>
         </div>
-        <input type="range" id="rngDemoFront" min="5" max="250" value="80">
+        <input type="range" id="rngDemoFront" min="5" max="200" value="80">
       </div>
-      <div class="field-item">
-        <div class="field-head">
-          <span>DOWN DROP DELTA</span>
-          <b id="lblDemoDown">+0 CM</b>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span>Penurunan Lantai (Turunan)</span>
+          <b id="lblDemoDown">+0 cm</b>
         </div>
-        <input type="range" id="rngDemoDown" min="0" max="60" value="0">
+        <input type="range" id="rngDemoDown" min="0" max="50" value="0">
       </div>
-      <div class="field-item">
-        <div class="field-head">
-          <span>CANE TILT</span>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span>Sudut Kemiringan Tongkat</span>
           <b id="lblDemoTilt">12°</b>
         </div>
         <input type="range" id="rngDemoTilt" min="0" max="90" value="12">
       </div>
-      <div class="field-item">
-        <div class="field-head">
-          <span>WATER SENSOR</span>
-          <b id="lblDemoWater">220 RAW</b>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span>Kadar Basah Sensor Air</span>
+          <b id="lblDemoWater">220 (Kering)</b>
         </div>
-        <input type="range" id="rngDemoWater" min="0" max="1023" value="220">
+        <input type="range" id="rngDemoWater" min="0" max="1000" value="220">
       </div>
     </div>
   </aside>
