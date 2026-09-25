@@ -34,6 +34,48 @@ MPU6050 (6-Axis IMU)       ---(I2C)----->                     ---(D6+BC547)-> 85
 
 ---
 
+## Visual Documentation
+
+### Mechanical Blueprint & Physical Dimensions
+
+![KATANA Mechanical Blueprint](assets/blueprint.png)
+
+> 2D CAD dimensional drawing of the KATANA smart cane assembly. Shows the structural layout of the forearm crutch chassis, sensor mounting positions (front-facing HC-SR04, downward-facing HC-SR04, MPU6050 IMU, and water sensor plate), handle ergonomics, and cable routing channels.
+
+---
+
+### System Architecture Concept Diagram
+
+![KATANA System Architecture Concept](assets/konsep_diagram.png)
+
+> High-level block diagram illustrating the full signal flow: environmental sensor inputs, onboard ATmega328P processing unit, hazard priority state machine, feedback actuator outputs, and the USB serial telemetry uplink to the Next.js dashboard.
+
+---
+
+### Physical Electronic Wiring Schematic
+
+![KATANA Physical Wiring Diagram](assets/wiring_diagram_riil.png)
+
+> Complete breadboard-level wiring schematic for the production physical hardware build. Includes pin assignments for all sensors (D2/D3 front ultrasonic, D10/D11 downward ultrasonic, A0 water sensor, I2C SDA/SCL for MPU6050), actuator driver circuit (PWM D5 motor, BC547 NPN transistor switch D6 for buzzer), and power distribution rails.
+
+---
+
+### Embedded Firmware Flowchart - Physical Hardware
+
+![KATANA Firmware Flowchart (Physical)](assets/flowchart_riil.png)
+
+> State machine flowchart of the production firmware running on the physical Arduino Nano. Covers the `setup()` initialization sequence (calibration sampling, IMU warm-up), the main `loop()` polling cycle, the deterministic hazard priority ladder evaluation, and serial override command parsing.
+
+---
+
+### Embedded Firmware Flowchart - Wokwi Virtual Simulation
+
+![KATANA Firmware Flowchart (Wokwi Simulation)](assets/flowchart_simulasi.png)
+
+> Adapted flowchart for the Wokwi virtual simulation runtime. Highlights the differences from the physical build: simulated sensor reads, virtual actuator outputs, and the `WOKWI_SIMULATION` compile flag branch paths.
+
+---
+
 ## Repository Structure
 
 ```text
@@ -173,5 +215,8 @@ KATANA firmware includes a bidirectional serial command parser. Developers can t
 
 ## Documentation Links
 
-- [Physical Wiring & Pinout Guide (REAL_WIRING.md)](REAL_WIRING.md)
-- [Web Serial Telemetry Dashboard Guide (dashboard/README.md)](dashboard/README.md)
+| Document | Description |
+|---|---|
+| [Physical Wiring & Pinout Guide](REAL_WIRING.md) | Step-by-step breadboard assembly, transistor driver schematic, and pin mapping checklist |
+| [Telemetry Dashboard Guide](dashboard/README.md) | Dashboard architecture, Web Serial setup, and component reference |
+| [Wokwi Simulation](https://wokwi.com/projects/474342215789115393) | Live virtual simulation in the browser, no hardware required |
